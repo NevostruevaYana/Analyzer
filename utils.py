@@ -1,0 +1,10 @@
+YEAR = 'год'
+SUBJECT_WITH_DISTRICT = 'субъект, район'
+SUBJECT = 'субъект'
+DISTRICT = 'район'
+INDICATOR = 'показатель'
+SPACE = " "
+YEARS_CSV = 'годы.csv'
+DISTRICT_CSV = 'районы.csv'
+CSV = '.csv'
+NONE_STR = 'None'
