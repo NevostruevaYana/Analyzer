@@ -1,4 +1,6 @@
 import math
+
+import numpy as np
 import pandas as pd
 from utils import YEAR, SUBJECT_WITH_DISTRICT, INDICATOR, CSV, NONE_STR
 
@@ -18,13 +20,13 @@ class Data:
     def create_sheet(xlsx, col_name, indicator, data_col_name, years, regs):
         file_name = str(indicator).replace(':', ',')
         xlsx_with_indicator = xlsx[xlsx[col_name].str.lower() == indicator]
-        out_file_structure = xlsx_with_indicator[[YEAR, SUBJECT_WITH_DISTRICT, data_col_name]]
+        out_file_structure = xlsx_with_indicator[[YEAR, SUBJECT_WITH_DISTRICT] + data_col_name.split('&')]
         df = pd.DataFrame(out_file_structure)
 
         for year in years:
             for reg in regs:
                 if len(df[(df[YEAR] == year) & (df[SUBJECT_WITH_DISTRICT] == reg)]) == 0:
-                    df.loc[len(df)] = [f"{year}", f"{reg}", f"{None}"]
+                    df.loc[len(df)] = [f"{year}", f"{reg}"] + list(np.repeat([f"{None}"], len(df.columns) - 2))
 
         df.rename(columns={data_col_name: INDICATOR}, inplace=True)
         df.to_csv(file_name[:28] + file_name[len(file_name) - 1] + CSV, index=False)

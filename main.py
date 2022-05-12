@@ -1,8 +1,15 @@
 import os
 import pandas as pd
+import scipy.stats as sts
 from data import Data
+import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
+import math
+import scipy
+from sklearn.feature_selection import f_regression
+from sklearn.linear_model import LinearRegression
+from scipy.stats import pearsonr
 import argparse
 from plot import Plot
 from utils import YEAR, SUBJECT_WITH_DISTRICT, SUBJECT, DISTRICT, SPACE, \
@@ -107,8 +114,18 @@ def analysis_time_series(args):
     data = df[df[SUBJECT_WITH_DISTRICT] == district]
     data.drop(columns=[SUBJECT_WITH_DISTRICT], axis=1, inplace=True)
 
+    years_list = data[YEAR].tolist()
+    int_y = [int(x) for x in years_list]
     indicators = data[INDICATOR].tolist()
     f_ind = [float(x) for x in indicators]
+
+    fig, ax = plt.subplots()
+    ax.plot(int_y, f_ind, 'o-')
+    ax.grid(True)
+    ax.set_title('Ряд динамики\n' + district + ' с ' + str(years_list[0]) + ' по ' + str(years_list[len(years_list) - 1]) + ' гг.')
+    ax.set_xlabel('Год')
+    ax.set_ylabel('Показатель')
+    plt.show()
 
     abs_inc_basic = list()
     abs_inc_chain = list()
@@ -141,18 +158,40 @@ def analysis_time_series(args):
     av_row = (0.5 * (f_ind[0] + f_ind[len(f_ind) - 1]) + sum(f_ind[1:len(f_ind) - 1])) / (data.shape[0] - 1)
     av_abs_inc = (f_ind[len(f_ind) - 1] - f_ind[0]) / (data.shape[0] - 1)
     av_growth_rate = pow(f_ind[len(f_ind) - 1] / f_ind[0], 1 / (data.shape[0] - 1)) * 100
-    av_inc_rate= av_growth_rate - 100
-    print(district)
-    print()
+    av_inc_rate = av_growth_rate - 100
 
-    years_list = data[YEAR].tolist()
-
-    print("Тенденция роста населения с " + str(years_list[0]) +" по " + str(years_list[len(years_list) - 1]) +" гг.")
+    print(district + ' с ' + str(years_list[0]) + ' по ' + str(years_list[len(years_list) - 1]) + ' гг.')
     print()
     print("Средний уровень ряда: " + str(av_row) + " чел.")
     print("Средний абсолютный прирост: " + str(av_abs_inc) + " чел.")
     print("Средний темп роста: " + str(av_growth_rate) + " %")
     print("Средний темп прироста: " + str(av_inc_rate) + " %")
+
+
+def group_comparison(args):
+    file = args.file
+    names = args.names.split('&')
+
+    data = pd.read_csv(file)
+    data = data[data.astype(str).ne('None').all(1)]
+    data.dropna()
+
+    x = data[names[0]].values
+    y = data[names[1]].values
+
+    fx = [float(n) for n in x if not math.isnan(float(n))]
+    fy = [float(n) for n in y if not math.isnan(float(n))]
+
+    print(stats.ttest_ind(fx, fy))
+
+
+def fisher_criterion(v1, v2):
+    return abs(np.mean(v1) - np.mean(v2)) / (np.var(v1) + np.var(v2))
+
+
+def criterion(r, n):
+    return r*np.sqrt((n-2)/(1-r*r))
+
 
 def corr_regr(args):
     years = pd.read_csv(YEARS_CSV)['0'].values
@@ -176,6 +215,19 @@ def corr_regr(args):
     fy = [float(n) for n in y]
 
     slope, intercept, r, p, stderr = stats.linregress(fx, fy)
+    print(fisher_criterion(fx, fy))
+    print(slope)
+    print(intercept)
+    print(r)
+    print(p)
+    print(stderr)
+
+    print()
+    t = criterion(r, len(fx))
+    t_alpha = sts.t.ppf(0.975, len(fx)-2)
+    print(t)
+    print(t_alpha)
+    print(abs(t)>t_alpha)
 
     if abs(r) < 0.3:
         print('Связь слабая')
@@ -212,6 +264,7 @@ def main():
     parser.add_argument('-ds', '--descriptive_statistics', type=str, help='Running descriptive statistics')
     parser.add_argument('-ts', '--time_series', type=str, help='Running time series analysis')
     parser.add_argument('-cr', '--correlation_regression', type=str, help='Running correlation regression analysis')
+    parser.add_argument('-gr', '--group', type=bool, help='Get csv')
 
     parser.add_argument('-f', '--file', type=str, help='Input xlsx (csv) file')
     parser.add_argument('-f2', '--file2', type=str, help='Input csv file2')
@@ -230,6 +283,7 @@ def main():
     indicator = args.create_indicator
     time_series = args.time_series
     correlation_regression = args.correlation_regression
+    group = args.group
 
     if generate:
         generate_csv(args)
@@ -242,6 +296,9 @@ def main():
 
     if descriptive_statistics:
         describe_st(args)
+
+    if group:
+        group_comparison(args)
 
     if correlation_regression:
         corr_regr(args)
