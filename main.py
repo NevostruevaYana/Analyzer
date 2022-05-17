@@ -20,7 +20,7 @@ def generate_csv(args):
     file = args.file
     values = args.values.lower()
     indicator_names = args.names.lower()
-    sheets = args.sheets.split(", ")
+    sheets = args.sheets.split("&")
 
     xlsx = pd.ExcelFile(file)
     if sheets is None:
@@ -50,13 +50,14 @@ def generate_csv(args):
 def create_indicator(args):
     file1 = args.file
     file2 = args.file2
+    col = args.column
     out_file = args.outfile
     num = float(args.count)
 
     years = pd.read_csv(YEARS_CSV)['0'].values
     regs = pd.read_csv(DISTRICT_CSV)['0'].values
 
-    Data.create_mark(file1, file2, years, regs, out_file, num)
+    Data.create_mark(file1, file2, col, years, regs, out_file, num)
     Plot.checkBD(out_file, INDICATOR)
     file = pd.read_csv(out_file)
 
@@ -70,10 +71,13 @@ def create_indicator(args):
 
 def describe_st(args):
     file_name = args.file
-    year = int(args.year)
+    year = args.year
 
     df = pd.read_csv(file_name)
-    data = df[df[YEAR] == year]
+    data = df
+    if (year != None):
+        year = int(year)
+        data = df[df[YEAR] == year]
     indicator = data[INDICATOR]
 
     ds = indicator.describe()
@@ -170,19 +174,50 @@ def analysis_time_series(args):
 
 def group_comparison(args):
     file = args.file
-    names = args.names.split('&')
+    file2 = args.file2
+    # names = args.names.split('&')
+    dependency = args.dependency
 
     data = pd.read_csv(file)
-    data = data[data.astype(str).ne('None').all(1)]
-    data.dropna()
+    data2 = pd.read_csv(file2)
+    # data = pd.read_csv(file)
+    # data = data[data.astype(str).ne('None').all(1)]
+    # data.dropna()
 
-    x = data[names[0]].values
-    y = data[names[1]].values
+    x = data[INDICATOR]
+    y = data2[INDICATOR]
 
-    fx = [float(n) for n in x if not math.isnan(float(n))]
-    fy = [float(n) for n in y if not math.isnan(float(n))]
+    statx, px = stats.normaltest(x)  # Критерий согласия Пирсона
+    staty, py = stats.normaltest(y)
+    pirsonx = False
+    pirsony = False
+    alpha = 0.05
+    if px > alpha:
+        pirsonx = True
+    if py > alpha:
+        pirsony = True
 
-    print(stats.ttest_ind(fx, fy))
+    print('1 показаетль: ' + str(x.mean()) + '+-' + str(x.std()))
+    print('2 показаетль: ' + str(y.mean()) + '+-' + str(y.std()))
+
+    if (pirsonx & pirsony):
+        if (dependency):
+            # 2 зависимые выборки (normal)
+            t = stats.ttest_rel(x, y)
+            print(t)
+        else:
+            # 2 независимые выборки (normal)
+            t = stats.ttest_ind(x, y)
+            print(t)
+    else:
+        if (dependency):
+            # 2 зависимые группы
+            t = stats.wilcoxon(x, y)
+            print(t)
+        else:
+            # 2 независимые группы
+            t = stats.mannwhitneyu(x, y)
+            print(t)
 
 
 def fisher_criterion(v1, v2):
@@ -259,12 +294,12 @@ def main():
 
     parser = argparse.ArgumentParser("python main.py")
 
-    parser.add_argument('-g', '--generate', type=bool, help='Get csv')
-    parser.add_argument('-i', '--create_indicator', type=str, help='Get csv with new indicator')
-    parser.add_argument('-ds', '--descriptive_statistics', type=str, help='Running descriptive statistics')
-    parser.add_argument('-ts', '--time_series', type=str, help='Running time series analysis')
-    parser.add_argument('-cr', '--correlation_regression', type=str, help='Running correlation regression analysis')
-    parser.add_argument('-gr', '--group', type=bool, help='Get csv')
+    parser.add_argument('-g', '--generate', action='store_true', help='Get csv')
+    parser.add_argument('-i', '--create_indicator', action='store_true', help='Get csv with new indicator')
+    parser.add_argument('-ds', '--descriptive_statistics', action='store_true', help='Running descriptive statistics')
+    parser.add_argument('-ts', '--time_series', action='store_true', help='Running time series analysis')
+    parser.add_argument('-cr', '--correlation_regression', action='store_true', help='Running correlation regression analysis')
+    parser.add_argument('-gr', '--group', action='store_true', help='Get csv')
 
     parser.add_argument('-f', '--file', type=str, help='Input xlsx (csv) file')
     parser.add_argument('-f2', '--file2', type=str, help='Input csv file2')
@@ -275,6 +310,8 @@ def main():
     parser.add_argument('-y', '--year', type=str, help='Year')
     parser.add_argument('-v', '--values', type=str, help='Column name with values')
     parser.add_argument('-c', '--count', type=str, help='Some number')
+    parser.add_argument('-d', '--dependency', action='store_true', help='Dependent sample or not')
+    parser.add_argument('-col', '--column', default=INDICATOR, help='Dependent sample or not')
 
     args = parser.parse_args()
 

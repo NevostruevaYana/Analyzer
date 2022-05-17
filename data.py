@@ -20,26 +20,28 @@ class Data:
     def create_sheet(xlsx, col_name, indicator, data_col_name, years, regs):
         file_name = str(indicator).replace(':', ',')
         xlsx_with_indicator = xlsx[xlsx[col_name].str.lower() == indicator]
-        out_file_structure = xlsx_with_indicator[[YEAR, SUBJECT_WITH_DISTRICT] + data_col_name.split('&')]
+        indicators = data_col_name.split('&')
+        out_file_structure = xlsx_with_indicator[[YEAR, SUBJECT_WITH_DISTRICT] + indicators]
         df = pd.DataFrame(out_file_structure)
 
-        for year in years:
-            for reg in regs:
-                if len(df[(df[YEAR] == year) & (df[SUBJECT_WITH_DISTRICT] == reg)]) == 0:
-                    df.loc[len(df)] = [f"{year}", f"{reg}"] + list(np.repeat([f"{None}"], len(df.columns) - 2))
+        df = df.drop(df[df.isnull().T.any()].index)
+        # for year in years:
+        #     for reg in regs:
+        #         if len(df[(df[YEAR] == year) & (df[SUBJECT_WITH_DISTRICT] == reg)]) == 0:
+        #             df.loc[len(df)] = [f"{year}", f"{reg}"] + list(np.repeat([f"{None}"], len(df.columns) - 2))
 
         df.rename(columns={data_col_name: INDICATOR}, inplace=True)
         df.to_csv(file_name[:28] + file_name[len(file_name) - 1] + CSV, index=False)
 
     @staticmethod
-    def create_mark(csv_1, csv_2, years, regs, out_csv, num):
+    def create_mark(csv_1, csv_2, col_name, years, regs, out_csv, num):
         csv1 = pd.read_csv(csv_1)
         csv2 = pd.read_csv(csv_2)
 
         df = pd.DataFrame({YEAR: [], SUBJECT_WITH_DISTRICT: [], INDICATOR: []})
         for reg in regs:
             for year in years:
-                a = csv1[(csv1[YEAR] == year) & (csv1[SUBJECT_WITH_DISTRICT] == reg)][INDICATOR].tolist()
+                a = csv1[(csv1[YEAR] == year) & (csv1[SUBJECT_WITH_DISTRICT] == reg)][col_name].tolist()
                 aa = csv2[(csv2[YEAR] == year) & (csv2[SUBJECT_WITH_DISTRICT] == reg)][INDICATOR].tolist()
                 if (bool(a)) & (bool(aa)):
                     if (a[0] != NONE_STR) & (aa[0] != NONE_STR) & (aa[0] != '0.0'): #& (a[0] != '0.0') & (aa[0] != '0.0'):
