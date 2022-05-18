@@ -3,7 +3,9 @@ import pandas as pd
 import scipy.stats as sts
 from data import Data
 import numpy as np
+import matplotlib.pyplot as boxplot
 import matplotlib.pyplot as plt
+import seaborn as sns
 from scipy import stats
 import math
 import scipy
@@ -180,9 +182,8 @@ def group_comparison(args):
 
     data = pd.read_csv(file)
     data2 = pd.read_csv(file2)
-    # data = pd.read_csv(file)
-    # data = data[data.astype(str).ne('None').all(1)]
-    # data.dropna()
+    name = file.removesuffix(CSV)
+    name2 = file2.removesuffix(CSV)
 
     x = data[INDICATOR]
     y = data2[INDICATOR]
@@ -197,8 +198,8 @@ def group_comparison(args):
     if py > alpha:
         pirsony = True
 
-    print('1 показаетль: ' + str(x.mean()) + '+-' + str(x.std()))
-    print('2 показаетль: ' + str(y.mean()) + '+-' + str(y.std()))
+    print(name + ': ' + str(round(x.mean(), 1)) + '+-' + str(round(x.std(), 1)))
+    print(name2 + ': ' + str(round(y.mean(), 1)) + '+-' + str(round(y.std(), 1)))
 
     if (pirsonx & pirsony):
         if (dependency):
@@ -218,6 +219,15 @@ def group_comparison(args):
             # 2 независимые группы
             t = stats.mannwhitneyu(x, y)
             print(t)
+
+    if t[1] > 0.05:
+        print('Различия выборок не существенны')
+    else:
+        print('Различия выборок существенны')
+
+    # sns.boxplot(df, x='показатель', y='значение')
+    plt.boxplot([data['показатель'], data2['показатель']], labels=[name, name2])
+    plt.show()
 
 
 def fisher_criterion(v1, v2):
