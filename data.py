@@ -1,8 +1,8 @@
-import math
-
-import numpy as np
 import pandas as pd
-from utils import YEAR, SUBJECT_WITH_DISTRICT, INDICATOR, CSV, NONE_STR
+import os
+from utils import YEAR, INDICATOR, CSV, \
+    SUBJECT, DISTRICT, CSV_DATA, CSV_PROPERTY, YEARS_CSV, DISTRICT_CSV
+
 
 class Data:
 
@@ -17,65 +17,74 @@ class Data:
         return list_
 
     @staticmethod
-    def create_sheet(xlsx, col_name, indicator, data_col_name, years, regs):
-        file_name = str(indicator).replace(':', ',')
-        xlsx_with_indicator = xlsx[xlsx[col_name].str.lower() == indicator]
+    def create_sheet(sheet_name, xlsx_sheet, property, col_name, data_col_name):
+        file_name = str(property).replace(':', ',')
+        xlsx_with_indicator = xlsx_sheet[xlsx_sheet[col_name].str.lower() == property]
         indicators = data_col_name.split('&')
-        out_file_structure = xlsx_with_indicator[[YEAR, SUBJECT_WITH_DISTRICT] + indicators]
-        df = pd.DataFrame(out_file_structure)
+        out_file_structure = xlsx_with_indicator[[YEAR, SUBJECT, DISTRICT] + indicators]
 
-        df = df.drop(df[df.isnull().T.any()].index)
-        # for year in years:
-        #     for reg in regs:
-        #         if len(df[(df[YEAR] == year) & (df[SUBJECT_WITH_DISTRICT] == reg)]) == 0:
-        #             df.loc[len(df)] = [f"{year}", f"{reg}"] + list(np.repeat([f"{None}"], len(df.columns) - 2))
+        df = pd.DataFrame(out_file_structure)
+        for i in indicators:
+            # ignore non float values
+            df[i].astype(float, errors='ignore')
+
+        dir = CSV_DATA + sheet_name + '/'
+        if not os.path.exists(dir):
+            os.mkdir(dir)
 
         df.rename(columns={data_col_name: INDICATOR}, inplace=True)
-        df.to_csv(file_name[:28] + file_name[len(file_name) - 1] + CSV, index=False)
+        df.to_csv(dir + file_name[:28] +
+                  file_name[len(file_name) - 1] + CSV, index=False)
 
     @staticmethod
-    def create_mark(csv_1, csv_2, col_name, years, regs, out_csv, num):
+    def create_mark(csv_1, csv_2, col_name, out_csv, num):
         csv1 = pd.read_csv(csv_1)
         csv2 = pd.read_csv(csv_2)
 
-        df = pd.DataFrame({YEAR: [], SUBJECT_WITH_DISTRICT: [], INDICATOR: []})
-        for reg in regs:
-            for year in years:
-                a = csv1[(csv1[YEAR] == year) & (csv1[SUBJECT_WITH_DISTRICT] == reg)][col_name].tolist()
-                aa = csv2[(csv2[YEAR] == year) & (csv2[SUBJECT_WITH_DISTRICT] == reg)][INDICATOR].tolist()
-                if (bool(a)) & (bool(aa)):
-                    if (a[0] != NONE_STR) & (aa[0] != NONE_STR) & (aa[0] != '0.0'): #& (a[0] != '0.0') & (aa[0] != '0.0'):
-                        if (not math.isnan(float(a[0]))) & (not math.isnan(float(aa[0]))):
-                            df.loc[len(df)] = [f"{year}", f"{reg}",
-                                               f"{float(a[0]) / float(aa[0]) * num}"]
+        years = pd.read_csv(YEARS_CSV)[YEAR].values
+        regs = pd.read_csv(DISTRICT_CSV)[[SUBJECT, DISTRICT]].values
 
-        df.to_csv(out_csv, index=False)
+        df = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], INDICATOR: []})
+        for year in years:
+            for reg in regs:
+                subject = reg[0]
+                district = reg[1]
+                # get row with identity year, subject and district
+                value1 = csv1[(csv1[YEAR] == year) & (csv1[SUBJECT] == subject)
+                              & (csv1[DISTRICT] == district)][col_name].tolist()
+                value2 = csv2[(csv2[YEAR] == year) & (csv2[SUBJECT] == subject)
+                              & (csv2[DISTRICT] == district)][INDICATOR].tolist()
+                if (bool(value1) & bool(value2)):
+                    df.loc[len(df)] = [year, subject, district,
+                                        value1[0] / value2[0] * num]
+
+        dir = CSV_DATA + CSV_PROPERTY
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+
+        df.to_csv(dir + out_csv, index=False)
+        return df
+
 
     @staticmethod
-    def combine_indicators(data_x, data_y, name_x, name_y, years, regs):
-        data = pd.DataFrame({YEAR: [], SUBJECT_WITH_DISTRICT: [], name_x: [], name_y: []})
+    def combine_indicators(data_x, data_y, name_x, name_y):
+        years = pd.read_csv(YEARS_CSV)[YEAR].values
+        regs = pd.read_csv(DISTRICT_CSV)[[SUBJECT, DISTRICT]].values
+
+        data = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], name_x: [], name_y: []})
 
         for year in years:
             for reg in regs:
-                if len(data_x[(data_x[YEAR] == year) & (data_x[SUBJECT_WITH_DISTRICT] == reg)]) == 1 & \
-                        len(data_y[(data_y[YEAR] == year) & (data_y[SUBJECT_WITH_DISTRICT] == reg)]) == 1:
-                    if not ((data_x[(data_x[YEAR] == year) & (data_x[SUBJECT_WITH_DISTRICT] == reg)][
-                                 INDICATOR].tolist()[
-                                 0] == NONE_STR) | (
-                                    data_y[(data_y[YEAR] == year) & (data_y[SUBJECT_WITH_DISTRICT] == reg)][
-                                        INDICATOR].tolist()[
-                                        0] == NONE_STR) |
-                            (
-                                    data_y[(data_y[YEAR] == year) & (data_y[SUBJECT_WITH_DISTRICT] == reg)][
-                                        INDICATOR].tolist()[
-                                        0] is None) |
-                            (data_x[(data_x[YEAR] == year) & (data_x[SUBJECT_WITH_DISTRICT] == reg)][
-                                 INDICATOR].tolist()[
-                                 0] is None)
-                    ):
-                        data.loc[len(data)] = [f"{year}", f"{reg}",
-                                               float(data_x[(data_x[YEAR] == year) & (
-                                                           data_x[SUBJECT_WITH_DISTRICT] == reg)][INDICATOR]),
-                                               float(data_y[(data_y[YEAR] == year) & (
-                                                           data_y[SUBJECT_WITH_DISTRICT] == reg)][INDICATOR])]
+                subject = reg[0]
+                district = reg[1]
+                value1 = data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
+                              & (data_x[DISTRICT] == district)][INDICATOR].tolist()
+                value2 = data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
+                               & (data_y[DISTRICT] == district)][INDICATOR].tolist()
+                if (bool(value1) & bool(value2)):
+                    data.loc[len(data)] = [year, subject, district,
+                        float(data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
+                              & (data_x[DISTRICT] == district)][INDICATOR]),
+                        float(data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
+                              & (data_y[DISTRICT] == district)][INDICATOR])]
         return data
