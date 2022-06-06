@@ -21,7 +21,10 @@ class Plot:
         fig, ax = plt.subplots()
         ax.set_title(gen_label(file_name))
         ax.hist(indicator)
-        ax.set_xlabel('показатель в ' + str(year) + ' году')
+        if year is None:
+            ax.set_xlabel('показатель за весь период')
+        else:
+            ax.set_xlabel('показатель в ' + str(year) + ' году')
         ax.set_ylabel('количество районов, входящих в интервал')
         plt.show()
 

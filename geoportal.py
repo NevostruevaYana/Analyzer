@@ -1,6 +1,8 @@
+import json
 import pandas as pd
 import main
-from utils import YEAR, SUBJECT, DISTRICT, DISTRICT_CSV
+from utils import YEAR, SUBJECT, DISTRICT, DISTRICT_CSV, \
+    INDICATORS, INDICATOR
 
 def gen_geo_inc(file_name, out_file_name):
     regs = pd.read_csv(DISTRICT_CSV)[[SUBJECT, DISTRICT]].values
@@ -33,7 +35,55 @@ def df_to_geojson(file):
     for feature in geojson['features']:
         print(feature['properties'])
 
-def read_j():
-    geojson = pd.read_json('geojson_data/здоровьеКрасноярск.geojson')
+
+def add_data(file_geo, file_df, indicator, column_names, out_file):
+    # Сброс ограничений на число столбцов
+    pd.set_option('display.max_columns', None)
+    # Сброс ограничений на количество символов в записи
+    pd.set_option('display.max_colwidth', None)
+
+    columns = column_names.split('&')
+
+    geojson = pd.read_json(file_geo)
+    with open(file_geo, encoding='utf-8') as f:
+        data = json.load(f)
+    df = pd.read_csv(file_df)
+    list_ = []
+
     for feature in geojson['features']:
-        print(feature['geometry'])
+        property = feature['properties']
+        geometry = feature['geometry']
+
+        value = property[SUBJECT] + property[DISTRICT]
+        if value in list_:
+            continue
+        list_.append(value)
+
+        new_property = df[(df[SUBJECT].str.contains(property[SUBJECT])) &
+                          (df[DISTRICT].str.contains(property[DISTRICT]))]
+        new_property.loc[:, SUBJECT] = property[SUBJECT]
+        new_property.loc[:, DISTRICT] = property[DISTRICT]
+        new_property.loc[:, INDICATORS] = indicator
+        cols = [YEAR, SUBJECT, DISTRICT, INDICATORS] + columns
+        new_property = new_property[cols]
+
+        for _,row in new_property.iterrows():
+            f = {'type': 'Feature',
+                 'geometry': geometry,
+                 'properties': {}}
+            for c in cols:
+                if c == YEAR:
+                    f['properties'][c] = int(row[c])
+                else:
+                    f['properties'][c] = row[c]
+            data['features'].append(f)
+
+    with open(out_file, 'w') as f:
+        json.dump(data, f)
+
+
+def read_j(file):
+    # geojson = pd.read_json('geojson_data/здоровьеКрасноярск.geojson')
+    geojson = pd.read_json(file)
+    for feature in geojson['features']:
+        print(feature['properties'])

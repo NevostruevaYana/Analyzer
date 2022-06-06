@@ -4,7 +4,7 @@ from data import Data
 import numpy as np
 from scipy import stats
 import argparse
-from geoportal import gen_geo_inc, df_to_geojson, read_j
+from geoportal import gen_geo_inc, df_to_geojson, read_j, add_data
 from plot import Plot
 from utils import YEAR, SPACE, SUBJECT, DISTRICT, \
     YEARS_CSV, DISTRICT_CSV, INDICATOR, CSV, CSV_DATA, CSV_PROPERTY, gen_label
@@ -52,7 +52,6 @@ def create_indicator(file1, file2, col_name, out_file, num):
 
     df_hampel = hampel(df[INDICATOR])
     df[INDICATOR] = df_hampel
-    df = df.drop(df[df.isna().T.any()].index)
 
     file_name = CSV_DATA + CSV_PROPERTY + out_file
     df.to_csv(file_name, index=False)
@@ -135,22 +134,21 @@ def analysis_time_series(file_name, subject, district, geo):
     data.insert(data.shape[1], 'темп прироста цепных, %', growth_inc_of_chain)
 
     print(subject + district)
-    print(data)
-
-    if data.shape[0] != 1:
-        av_row = (0.5 * (f_ind[0] + f_ind[len(f_ind) - 1]) + sum(f_ind[1:len(f_ind) - 1])) / (data.shape[0] - 1)
-        av_abs_inc = (f_ind[len(f_ind) - 1] - f_ind[0]) / (data.shape[0] - 1)
-        av_growth_rate = pow(f_ind[len(f_ind) - 1] / f_ind[0], 1 / (data.shape[0] - 1)) * 100
-        av_inc_rate = av_growth_rate - 100
 
     if not geo:
         print(subject + SPACE + district)
         print('Тенденция роста населения с ' + str(years_list[0]) + ' по ' + str(years_list[len(years_list) - 1]) + ' гг.')
         print()
-        print("Средний уровень ряда: " + str(round(av_row, 2)) + " чел.")
-        print("Средний абсолютный прирост: " + str(round(av_abs_inc, 2)) + " чел.")
-        print("Средний темп роста: " + str(round(av_growth_rate, 2)) + " %")
-        print("Средний темп прироста: " + str(round(av_inc_rate, 2)) + " %")
+        if data.shape[0] != 1:
+            av_row = (0.5 * (f_ind[0] + f_ind[len(f_ind) - 1]) + sum(f_ind[1:len(f_ind) - 1])) / (data.shape[0] - 1)
+            av_abs_inc = (f_ind[len(f_ind) - 1] - f_ind[0]) / (data.shape[0] - 1)
+            av_growth_rate = pow(f_ind[len(f_ind) - 1] / f_ind[0], 1 / (data.shape[0] - 1)) * 100
+            av_inc_rate = av_growth_rate - 100
+
+            print("Средний уровень ряда: " + str(round(av_row, 2)) + " чел.")
+            print("Средний абсолютный прирост: " + str(round(av_abs_inc, 2)) + " чел.")
+            print("Средний темп роста: " + str(round(av_growth_rate, 2)) + " %")
+            print("Средний темп прироста: " + str(round(av_inc_rate, 2)) + " %")
 
         Plot.paintDynamicDiagram(int_y, f_ind, district, years_list)
 

@@ -54,9 +54,9 @@ class Data:
                               & (csv1[DISTRICT] == district)][col_name].tolist()
                 value2 = csv2[(csv2[YEAR] == year) & (csv2[SUBJECT] == subject)
                               & (csv2[DISTRICT] == district)][INDICATOR].tolist()
-                if (bool(value1) & bool(value2)):
+                if bool(value1) & bool(value2):
                     df.loc[len(df)] = [year, subject, district,
-                                        value1[0] / value2[0] * num]
+                                       value1[0] / value2[0] * num]
 
         dir = CSV_DATA + CSV_PROPERTY
         if not os.path.exists(dir):
@@ -64,7 +64,6 @@ class Data:
 
         df.to_csv(dir + out_csv, index=False)
         return df
-
 
     @staticmethod
     def combine_indicators(data_x, data_y, name_x, name_y):
@@ -78,13 +77,13 @@ class Data:
                 subject = reg[0]
                 district = reg[1]
                 value1 = data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
-                              & (data_x[DISTRICT] == district)][INDICATOR].tolist()
+                                & (data_x[DISTRICT] == district)][INDICATOR].tolist()
                 value2 = data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
-                               & (data_y[DISTRICT] == district)][INDICATOR].tolist()
+                                & (data_y[DISTRICT] == district)][INDICATOR].tolist()
                 if (bool(value1) & bool(value2)):
                     data.loc[len(data)] = [year, subject, district,
-                        float(data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
-                              & (data_x[DISTRICT] == district)][INDICATOR]),
-                        float(data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
-                              & (data_y[DISTRICT] == district)][INDICATOR])]
+                                           float(data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
+                                                        & (data_x[DISTRICT] == district)][INDICATOR]),
+                                           float(data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
+                                                        & (data_y[DISTRICT] == district)][INDICATOR])]
         return data

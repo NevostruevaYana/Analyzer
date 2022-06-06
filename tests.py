@@ -28,13 +28,13 @@ class TestMethods(unittest.TestCase):
 
     # create indicator
 
-    def test_doctor_100k(self):
+    def test_death_100k(self):
         create_indicator('csv_data/11/количество умерших в данном ,.csv',
                          'csv_data/11/общая численность населения,о.csv',
                          'показатель',
                          'смертность на 100 тыс.csv', 100000)
 
-    def test_death_100k(self):
+    def test_doctor_100k(self):
         create_indicator('csv_data/31/количество врачей всех специй.csv',
                          'csv_data/11/общая численность населения,о.csv',
                          'показатель',
@@ -55,7 +55,7 @@ class TestMethods(unittest.TestCase):
         create_indicator('csv_data/23/заболеваемость всего,,.csv',
                          'csv_data/11/численность детей (0-14 лет ).csv',
                          'от 0-14 лет абс.',
-                         'заболеваемость 0-14 лет на 100 тыс.csv', 100000)
+                         'заболеваемость 0-14 лет на 100 тыс.нас.csv', 100000)
 
     def test_incidence_15_17(self):
         create_indicator('csv_data/23/заболеваемость всего,,.csv',
@@ -78,13 +78,21 @@ class TestMethods(unittest.TestCase):
     # geo portal
 
     def test_geo_1(self):
-        gen_geo_inc('csv_data/11/общая численность населения,о.csv', 'численность, ряды динамики.csv')
+        gen_geo_inc('csv_data/11/общая численность населения,о.csv', 'csv_data/analysis/численность, ряды динамики.csv')
 
     def test__(self):
         df_to_geojson('численность, ряды динамики.csv')
 
-    def test_ff(self):
-        read_j()
+    def test_add_geo(self):
+        add_data('geojson_data/здоровьеАрхангельска.geojson', 'численность, ряды динамики.csv',
+                 'прирост', 'абсолют. прирост цепных&темп прироста цепных, %', 'geojson_data/pri.geojson')
+
+    def test_add_geo2(self):
+        add_data('geojson_data/pri.geojson', 'csv_data/csv_prop/заболеваемость 0-14 лет на 100 тыс.csv',
+                 'заболеваемость 0-14 лет на 100 тыс. нас.', 'значение', 'geojson_data/pri2.geojson')
+
+    def test_ffff(self):
+        read_j('geojson_data/2008.geojson')
 
 
 if __name__ == '__main__':
