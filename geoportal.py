@@ -2,11 +2,13 @@ import json
 import pandas as pd
 import main
 from utils import YEAR, SUBJECT, DISTRICT, DISTRICT_CSV, \
-    INDICATORS, INDICATOR
+    INDICATOR, YEAR_GEO, SUBJECT_GEO, DISTRICT_GEO, INDICATOR_GEO
+
 
 def gen_geo_inc(file_name, out_file_name):
     regs = pd.read_csv(DISTRICT_CSV)[[SUBJECT, DISTRICT]].values
-    df = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], 'абсолют. прирост цепных': [], 'темп прироста цепных, %': []})
+    df = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], 'абсолют. прирост цепных': [],
+                       'темп прироста цепных, %': []})
 
     for reg in regs:
         subject = reg[0]
@@ -36,17 +38,12 @@ def df_to_geojson(file):
         print(feature['properties'])
 
 
-def add_data(file_geo, file_df, indicator, column_names, out_file):
-    # Сброс ограничений на число столбцов
-    pd.set_option('display.max_columns', None)
-    # Сброс ограничений на количество символов в записи
-    pd.set_option('display.max_colwidth', None)
-
+def add_data(file_geo, file_df, indicator, column_names, column_geo_names, out_file):
     columns = column_names.split('&')
+    columns_geo = column_geo_names.split('&')
 
     geojson = pd.read_json(file_geo)
-    with open(file_geo, encoding='utf-8') as f:
-        data = json.load(f)
+    data = {'type': 'FeatureCollection', 'features': []}
     df = pd.read_csv(file_df)
     list_ = []
 
@@ -59,20 +56,26 @@ def add_data(file_geo, file_df, indicator, column_names, out_file):
             continue
         list_.append(value)
 
-        new_property = df[(df[SUBJECT].str.contains(property[SUBJECT])) &
-                          (df[DISTRICT].str.contains(property[DISTRICT]))]
-        new_property.loc[:, SUBJECT] = property[SUBJECT]
-        new_property.loc[:, DISTRICT] = property[DISTRICT]
-        new_property.loc[:, INDICATORS] = indicator
-        cols = [YEAR, SUBJECT, DISTRICT, INDICATORS] + columns
-        new_property = new_property[cols]
+        df_new_property = df[(df[SUBJECT].str.contains(property[SUBJECT])) &
+                             (df[DISTRICT].str.contains(property[DISTRICT]))]
+        df_new_property.at[:, SUBJECT] = property[SUBJECT]
+        df_new_property.at[:, DISTRICT] = property[DISTRICT]
+        df_new_property.at[:, INDICATOR] = indicator
 
-        for _,row in new_property.iterrows():
+        df_new_property.rename(columns={INDICATOR: INDICATOR_GEO, YEAR: YEAR_GEO,
+                                        SUBJECT: SUBJECT_GEO, DISTRICT: DISTRICT_GEO}, inplace=True)
+        for idx, c in enumerate(columns):
+            df_new_property.rename(columns={c: columns_geo[idx]}, inplace=True)
+
+        cols = [INDICATOR_GEO, YEAR_GEO, SUBJECT_GEO, DISTRICT_GEO] + columns_geo
+        df_new_property = df_new_property[cols]
+
+        for _,row in df_new_property.iterrows():
             f = {'type': 'Feature',
                  'geometry': geometry,
                  'properties': {}}
             for c in cols:
-                if c == YEAR:
+                if c == YEAR_GEO:
                     f['properties'][c] = int(row[c])
                 else:
                     f['properties'][c] = row[c]
@@ -82,8 +85,8 @@ def add_data(file_geo, file_df, indicator, column_names, out_file):
         json.dump(data, f)
 
 
-def read_j(file):
-    # geojson = pd.read_json('geojson_data/здоровьеКрасноярск.geojson')
+def read_geojson(file):
     geojson = pd.read_json(file)
+    print(geojson['type'])
     for feature in geojson['features']:
         print(feature['properties'])

@@ -1,11 +1,14 @@
 import pandas as pd
 
 YEAR = 'год'
+YEAR_GEO = 'year'
 SUBJECT_WITH_DISTRICT = 'субъект,район'
 SUBJECT = 'субъект'
+SUBJECT_GEO = 'subject'
 DISTRICT = 'район'
+DISTRICT_GEO = 'district'
 INDICATOR = 'показатель'
-INDICATORS = 'показатели'
+INDICATOR_GEO = 'indicator'
 SPACE = ' '
 YEARS_CSV = 'годы.csv'
 DISTRICT_CSV = 'районы.csv'
