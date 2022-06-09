@@ -16,6 +16,9 @@ CSV = '.csv'
 NONE_STR = 'None'
 CSV_DATA = 'csv_data/'
 CSV_PROPERTY = 'csv_prop/'
+DESCRIPTIVE_NAME = 'csv_data/analysis/descriptive_st/descriptive.csv'
+TIME_SERIES_NAME = 'csv_data/analysis/time_series/'
+GROUP_COMPARISON_NAME = 'csv_data/analysis/group_comparison/results.csv'
 
 # remove dir and extension
 def gen_label(name):
@@ -47,7 +50,7 @@ def count_arzf(file_name):
                         sum[idx] = sum[idx] + row[c]
                 else:
                     index = idx
-            if (index != -1):
+            if index != -1:
                 for idx, c in enumerate(cols):
                     if sum[idx] != 0.0:
                         df.at[index, c] = sum[idx]

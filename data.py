@@ -1,58 +1,79 @@
-import pandas as pd
 import os
 import numpy as np
-from plot import *
 from utils import *
 
 
-# генерация csv-файлов из excel
-def generate_csv(file, sheets, prop_col_name, value_col_name):
-    xlsx = pd.ExcelFile(file)
-    if sheets is None:
-        sheets = xlsx.sheet_names
+class Data(object):
 
-    # read all sheets
-    for sheet in sheets:
-        xlsx_sheet = pd.read_excel(xlsx, sheet)
+    def __init__(self):
+        self.years = pd.read_csv(YEARS_CSV)[YEAR].values
+        self.regs = pd.read_csv(DISTRICT_CSV)[[SUBJECT, DISTRICT]].values
 
-        # some columns are different case
-        xlsx_sheet.columns = xlsx_sheet.columns.str.lower()
+    # генерация csv-файлов из excel
+    def generate_csv(self, file, sheets, prop_col_name, value_col_name):
+        xlsx = pd.ExcelFile(file)
+        if sheets is None:
+            sheets = xlsx.sheet_names
 
-        districts = xlsx_sheet[[SUBJECT, DISTRICT]].drop_duplicates()
-        years = xlsx_sheet[YEAR].drop_duplicates()
+        # read all sheets
+        for sheet in sheets:
+            xlsx_sheet = pd.read_excel(xlsx, sheet)
 
-        # create CSV-files years and districts
-        if not os.path.exists(YEARS_CSV) and not os.path.exists(DISTRICT_CSV):
-            years.to_csv(YEARS_CSV, index=False)
-            districts.to_csv(DISTRICT_CSV, index=False)
+            # some columns are different case
+            xlsx_sheet.columns = xlsx_sheet.columns.str.lower()
 
-        properties = get_lower_list(xlsx_sheet, prop_col_name)
+            districts = xlsx_sheet[[SUBJECT, DISTRICT]].drop_duplicates()
+            years = xlsx_sheet[YEAR].drop_duplicates()
 
-        for property in properties:
-            create_csv(sheet, xlsx_sheet, property, prop_col_name, value_col_name)
+            # create CSV-files years and districts
+            if not os.path.exists(YEARS_CSV) and not os.path.exists(DISTRICT_CSV):
+                years.to_csv(YEARS_CSV, index=False)
+                districts.to_csv(DISTRICT_CSV, index=False)
 
-        files = os.scandir('csv_data/' + sheet)
-        for f in files:
-            count_arzf(f)
+            properties = get_lower_list(xlsx_sheet, prop_col_name)
 
+            for property in properties:
+                create_csv(sheet, xlsx_sheet, property, prop_col_name, value_col_name)
 
-# создание нового показателя
-def create_indicator(file1, file2, col_name, out_file, num):
-    df = create_new_csv_indicator(file1, file2, col_name, out_file, num)
-    paintPointDiagram(df, INDICATOR, out_file)
+            files = os.scandir('csv_data/' + sheet)
+            for f in files:
+                count_arzf(f)
 
-    df_hampel = hampel(df[INDICATOR])
-    df[INDICATOR] = df_hampel
+    # создание нового показателя
+    def create_indicator(self, file1, file2, col_name, out_file, num):
+        years = self.years
+        regs = self.regs
 
-    file_name = CSV_DATA + CSV_PROPERTY + out_file
-    df.to_csv(file_name, index=False)
-    paintPointDiagram(df, INDICATOR, out_file)
+        df = create_new_csv_indicator(file1, file2, col_name, out_file,
+                                      num, years, regs)
+        # paintPointDiagram(df, INDICATOR, out_file)
 
+        df_hampel = hampel(df[INDICATOR])
+        df[INDICATOR] = df_hampel
 
-# получение уникальных значений колонки для указанного листа файла
-def get_lower_list(sheet, column_name):
-    list_ = sheet[column_name].str.lower().unique()
-    return list_
+        file_name = CSV_DATA + CSV_PROPERTY + out_file
+        df.to_csv(file_name, index=False)
+        # paintPointDiagram(df, INDICATOR, out_file)
+
+    # объединение 2 показателей в один csv
+    def combine_indicators(self, data_x, data_y, name_x, name_y):
+        data = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], name_x: [], name_y: []})
+
+        for year in self.years:
+            for reg in self.regs:
+                subject = reg[0]
+                district = reg[1]
+                value1 = data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
+                                & (data_x[DISTRICT] == district)][INDICATOR].tolist()
+                value2 = data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
+                                & (data_y[DISTRICT] == district)][INDICATOR].tolist()
+                if (bool(value1) & bool(value2)):
+                    data.loc[len(data)] = [year, subject, district,
+                                           float(data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
+                                                        & (data_x[DISTRICT] == district)][INDICATOR]),
+                                           float(data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
+                                                        & (data_y[DISTRICT] == district)][INDICATOR])]
+        return data
 
 
 # фильтр Хампела для обнаружения выбросов
@@ -64,6 +85,12 @@ def hampel(values_orig):
     outlier_idx = difference > threshold
     values[outlier_idx] = np.nan
     return values
+
+
+# получение уникальных значений колонки для указанного листа файла
+def get_lower_list(sheet, column_name):
+    list_ = sheet[column_name].str.lower().unique()
+    return list_
 
 
 # основное преобразование показателя из excel в csv
@@ -88,12 +115,9 @@ def create_csv(sheet_name, xlsx_sheet, property, col_name, data_col_name):
 
 
 # создание нового показателя
-def create_new_csv_indicator(csv_1, csv_2, col_name, out_csv, num):
+def create_new_csv_indicator(csv_1, csv_2, col_name, out_csv, num, years, regs):
     csv1 = pd.read_csv(csv_1)
     csv2 = pd.read_csv(csv_2)
-
-    years = pd.read_csv(YEARS_CSV)[YEAR].values
-    regs = pd.read_csv(DISTRICT_CSV)[[SUBJECT, DISTRICT]].values
 
     df = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], INDICATOR: []})
     for year in years:
@@ -115,27 +139,3 @@ def create_new_csv_indicator(csv_1, csv_2, col_name, out_csv, num):
 
     df.to_csv(dir + out_csv, index=False)
     return df
-
-
-# объединение 2 показателей в один csv
-def combine_indicators(data_x, data_y, name_x, name_y):
-    years = pd.read_csv(YEARS_CSV)[YEAR].values
-    regs = pd.read_csv(DISTRICT_CSV)[[SUBJECT, DISTRICT]].values
-
-    data = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], name_x: [], name_y: []})
-
-    for year in years:
-        for reg in regs:
-            subject = reg[0]
-            district = reg[1]
-            value1 = data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
-                            & (data_x[DISTRICT] == district)][INDICATOR].tolist()
-            value2 = data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
-                            & (data_y[DISTRICT] == district)][INDICATOR].tolist()
-            if (bool(value1) & bool(value2)):
-                data.loc[len(data)] = [year, subject, district,
-                                       float(data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
-                                                    & (data_x[DISTRICT] == district)][INDICATOR]),
-                                       float(data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
-                                                    & (data_y[DISTRICT] == district)][INDICATOR])]
-    return data

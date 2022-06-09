@@ -1,44 +1,11 @@
 import json
 import pandas as pd
-import main
 from utils import YEAR, SUBJECT, DISTRICT, DISTRICT_CSV, \
     INDICATOR, YEAR_GEO, SUBJECT_GEO, DISTRICT_GEO, INDICATOR_GEO
 
 
-def gen_geo_inc(file_name, out_file_name):
-    regs = pd.read_csv(DISTRICT_CSV)[[SUBJECT, DISTRICT]].values
-    df = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], 'абсолют. прирост цепных': [],
-                       'темп прироста цепных, %': []})
-
-    for reg in regs:
-        subject = reg[0]
-        district = reg[1]
-
-        f = main.analysis_time_series(file_name, subject, district, True)
-        f = f[[YEAR, SUBJECT, DISTRICT, 'абсолют. прирост цепных', 'темп прироста цепных, %']]
-        df = pd.concat([df, f], ignore_index=True)
-        df = df.reset_index(drop=True)
-
-    df.to_csv(out_file_name, index=False)
-
-
-def df_to_geojson(file):
-    df = pd.read_csv(file)
-    geojson = {'type': 'FeatureCollection', 'features': []}
-    properties = df.columns.tolist()
-    for _,row in df.iterrows():
-        feature = {'type': 'Feature',
-                   'properties': {},
-                   'geometry': {'type': 'Point',
-                                'coordinates': []}}
-        for p in properties:
-            feature['properties'][p] = row[p]
-        geojson['features'].append(feature)
-    for feature in geojson['features']:
-        print(feature['properties'])
-
-
-def add_data(file_geo, file_df, indicator, column_names, column_geo_names, out_file):
+def generate_geojson_from_df(file_geo, file_df, indicator, column_names,
+                             column_geo_names, out_file):
     columns = column_names.split('&')
     columns_geo = column_geo_names.split('&')
 
@@ -85,7 +52,7 @@ def add_data(file_geo, file_df, indicator, column_names, column_geo_names, out_f
         json.dump(data, f)
 
 
-def read_geojson(file):
+def read_geojson_content(file):
     geojson = pd.read_json(file)
     print(geojson['type'])
     for feature in geojson['features']:

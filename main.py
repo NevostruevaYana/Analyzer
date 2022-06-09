@@ -1,15 +1,13 @@
 from data import *
 from analysis import *
 import argparse
-from geoportal import *
-from utils import YEAR, SPACE, SUBJECT, DISTRICT, \
-    YEARS_CSV, DISTRICT_CSV, INDICATOR, CSV, CSV_DATA, CSV_PROPERTY, gen_label
+from geojson_generator import *
+from utils import *
 
 
 def main():
     # Сброс ограничений на число столбцов
     pd.set_option('display.max_columns', None)
-
     # Сброс ограничений на количество символов в записи
     pd.set_option('display.max_colwidth', None)
 
@@ -31,6 +29,7 @@ def main():
     parser.add_argument('-s', '--sheets', type=str, help='Only some sheets')
     parser.add_argument('-n', '--names', type=str, help='Name')
     parser.add_argument('-y', '--year', type=str, help='Year')
+    parser.add_argument('-fct', '--factor', type=str, help='Factor name')
     parser.add_argument('-v', '--values', type=str, help='Column name with values')
     parser.add_argument('-c', '--count', type=str, help='Some number')
     parser.add_argument('-d', '--dependency', action='store_true', help='Dependent sample or not')
@@ -45,7 +44,8 @@ def main():
     correlation_regression = args.correlation_regression
     group = args.group
     geo = args.geo
-    print()
+
+    analysis  = Analysis()
 
     if geo:
         file = args.file
@@ -69,29 +69,23 @@ def main():
 
     if descriptive_statistics:
         file_name = args.file
-        year = args.year
-        describe_st(file_name, year)
+        factor = args.factor
+        analysis.descriptive_st(file_name, factor)
 
     if time_series:
         file_name = args.file
-        district = args.names
-
-        district = district.split(',')
-        subject = district[0]
-        district = district[1]
-
-        analysis_time_series(file_name, subject, district, False)
+        analysis.analysis_time_series(file_name)
 
     if group:
         file = args.file
         file2 = args.file2
         dependency = args.dependency
-        group_comparison(file, file2, dependency)
+        analysis.group_comparison(file, file2, dependency)
 
     if correlation_regression:
         file1 = args.file
         file2 = args.file2
-        corr_regression(file1, file2)
+        analysis.corr_regression(file1, file2)
 
 
 # Предполагается обязательное наличие колонок Год, Район, Субъект
