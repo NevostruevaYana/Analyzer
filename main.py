@@ -6,6 +6,11 @@ from utils import *
 
 
 def main():
+    # Сброс ограничений на число столбцов
+    pd.set_option('display.max_columns', None)
+    # Сброс ограничений на количество символов в записи
+    pd.set_option('display.max_colwidth', None)
+
     parser = argparse.ArgumentParser('python main.py')
 
     parser.add_argument('-g', '--generate', action='store_true', help='Get csv')

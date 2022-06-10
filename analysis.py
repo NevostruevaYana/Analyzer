@@ -1,5 +1,7 @@
+import matplotlib.pyplot as plt
 from scipy import stats
 from utils import *
+import seaborn as sns
 
 
 class Analysis(object):
@@ -11,11 +13,10 @@ class Analysis(object):
         self.subject_district_df = district_csv
 
     # Описательная статистика
-    def descriptive_st(self, file_name, factor):
+    def descriptive_st(self, file_name, property, factor):
         assert factor in [YEAR, SUBJECT, DISTRICT], 'Некорректный фактор анализа'
 
         df = pd.read_csv(file_name)
-        indicator = gen_label(file_name)
 
         if factor == YEAR:
             factor_list = self.years
@@ -28,35 +29,32 @@ class Analysis(object):
                                'mean': [], 'std': [], 'min': [], 'max': [], 'normality': []})
 
         for f in factor_list:
-            sorted_df = df[df[factor] == f][INDICATOR]
+            sorted_df = df[df[factor] == f][property]
+            print(sorted_df)
+            sorted_df = sorted_df.dropna()
+            print(sorted_df)
 
             ds = sorted_df.describe()
 
             alpha = 0.05
             stat, p = stats.normaltest(sorted_df)
+            print(p)
             pirson = False
             if p > alpha:
                 pirson = True
 
-            fin_df.loc[len(fin_df)] = [indicator, factor, f, round(ds.loc['count'], 2),
+            fin_df.loc[len(fin_df)] = [property, factor, f, round(ds.loc['count'], 2),
                                        round(ds.loc['mean'], 2), round(ds.loc['std'], 2),
                                        round(ds.loc['min'], 2), round(ds.loc['max'], 2), round(pirson, 2)]
 
-        if os.path.exists(DESCRIPTIVE_NAME):
-            read_df = pd.read_csv(DESCRIPTIVE_NAME)
-            read_df = read_df.append(fin_df, ignore_index=True)
-            read_df.drop_duplicates()
-            read_df.to_csv(DESCRIPTIVE_NAME, index=False)
-            return read_df
-        else:
-            fin_df.to_csv(DESCRIPTIVE_NAME, index=False)
-            return fin_df
+        append_row_to_file(DESCRIPTIVE_NAME, fin_df)
 
         # paintHist(file_name, indicator, factor)
 
     # Анализ динамических рядов
-    def analysis_time_series(self, file_name):
+    def analysis_time_series(self, file_name, property):
         df = pd.read_csv(file_name)
+        out_name = property.replace(':', ',')
 
         districts = self.subject_district_df
         fin_df = pd.DataFrame()
@@ -69,7 +67,7 @@ class Analysis(object):
 
             years_list = data[YEAR].tolist()
             int_y = [int(x) for x in years_list]
-            indicators = data[INDICATOR].tolist()
+            indicators = data[property].tolist()
             f_ind = [float(x) for x in indicators]
 
             abs_inc_basic = list()
@@ -92,12 +90,16 @@ class Analysis(object):
                 growth_inc_of_chain.append(round(jj - 100, 2))
                 first_ind = i
 
-            data.insert(data.shape[1], 'абсолют. прирост базисных', abs_inc_basic)
-            data.insert(data.shape[1], 'абсолют. прирост цепных', abs_inc_chain)
-            data.insert(data.shape[1], 'темп роста базисных, %', growth_rate_of_basic)
-            data.insert(data.shape[1], 'темп роста цепных, %', growth_rate_of_chain)
-            data.insert(data.shape[1], 'темп прироста базисных, %', growth_inc_of_basic)
-            data.insert(data.shape[1], 'темп прироста цепных, %', growth_inc_of_chain)
+            prop_list = ['абсолют. прирост базисных', 'абсолют. прирост цепных',
+                         'темп роста базисных, %', 'темп роста цепных, %',
+                         'темп прироста базисных, %', 'темп прироста цепных, %']
+
+            data.insert(data.shape[1], prop_list[0], abs_inc_basic)
+            data.insert(data.shape[1], prop_list[1], abs_inc_chain)
+            data.insert(data.shape[1], prop_list[2], growth_rate_of_basic)
+            data.insert(data.shape[1], prop_list[3], growth_rate_of_chain)
+            data.insert(data.shape[1], prop_list[4], growth_inc_of_basic)
+            data.insert(data.shape[1], prop_list[5], growth_inc_of_chain)
 
             with_year = str(years_list[0])
             on_year = str(years_list[len(years_list) - 1])
@@ -117,11 +119,12 @@ class Analysis(object):
                                                    round(av_growth_rate, 2), round(av_inc_rate, 2)]
 
             # paintDynamicDiagram(int_y, f_ind, district, years_list)
-            fin_df = fin_df.append(data, ignore_index=True)
+            fin_df = fin_df.append(data[[YEAR, SUBJECT, DISTRICT] + prop_list], ignore_index=True)
             fin_general_df = fin_general_df.append(general_df, ignore_index=True)
 
-        fin_df.to_csv(TIME_SERIES_NAME + gen_label(file_name) + CSV, index=False)
-        fin_general_df.to_csv(TIME_SERIES_NAME + 'gen_' + gen_label(file_name) + CSV, index=False)
+        print(fin_df)
+        fin_df.to_csv(TIME_SERIES_NAME + out_name + CSV, index=False)
+        fin_general_df.to_csv(TIME_SERIES_NAME + 'gen_' + out_name + CSV, index=False)
 
     def group_comparison(self, file, file2, dependency):
         data = pd.read_csv(file)
@@ -172,13 +175,7 @@ class Analysis(object):
 
         df.loc[len(df)] = [name, name2, mean_1, mean_2, std_1, std_2, difference]
 
-        if os.path.exists(GROUP_COMPARISON_NAME):
-            read_df = pd.read_csv(GROUP_COMPARISON_NAME)
-            read_df = read_df.append(df, ignore_index=True)
-            read_df.drop_duplicates()
-            read_df.to_csv(GROUP_COMPARISON_NAME, index=False)
-        else:
-            df.to_csv(GROUP_COMPARISON_NAME, index=False)
+        append_row_to_file(GROUP_COMPARISON_NAME, df)
 
         # paintBox(data, data2, name, name2)
 
@@ -238,3 +235,16 @@ def combine_indicators(data_x, data_y, name_x, name_y, years, regs):
                                        float(data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
                                                     & (data_y[DISTRICT] == district)][INDICATOR])]
     return data
+
+
+@staticmethod
+def t(df, df2):
+    f = pd.read_csv(df)
+    f2 = pd.read_csv(df2)
+    f['смертность'] = f2['смертность на 100 тыс. нас.']
+    h = f.corr()
+    print(f.corr())
+    fig, ax = plt.subplots(figsize=(12, 10))
+    fig.subplots_adjust(0.25, 0.25, 0.93, 0.93)
+    sns.heatmap(h, ax=ax, cmap="YlGnBu", linewidths=0.1, annot=True)
+    plt.show()
