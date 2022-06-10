@@ -1,4 +1,3 @@
-from data import *
 from scipy import stats
 from utils import *
 
@@ -6,28 +5,27 @@ from utils import *
 class Analysis(object):
 
     def __init__(self):
-        self.subject_list = pd.read_csv(DISTRICT_CSV)[SUBJECT].unique()
-        self.district_list = pd.read_csv(DISTRICT_CSV)[DISTRICT].unique()
-        self.subject_district_list = pd.read_csv(DISTRICT_CSV)
+        district_csv = pd.read_csv(DISTRICT_CSV)
+        self.years = pd.read_csv(YEARS_CSV)[YEAR].values
+        self.regs = district_csv[[SUBJECT, DISTRICT]].values
+        self.subject_district_df = district_csv
 
     # Описательная статистика
     def descriptive_st(self, file_name, factor):
-        assert factor in [YEAR, SUBJECT, DISTRICT, None], 'Некорректный фактор анализа'
+        assert factor in [YEAR, SUBJECT, DISTRICT], 'Некорректный фактор анализа'
 
         df = pd.read_csv(file_name)
         indicator = gen_label(file_name)
 
-        factor_list = []
-        if factor is not None:
-            if factor == YEAR:
-                factor_list = pd.read_csv(YEARS_CSV)[YEAR].values
-            elif factor == SUBJECT:
-                factor_list = self.subject_list
-            else:
-                factor_list = self.district_list
+        if factor == YEAR:
+            factor_list = self.years
+        elif factor == SUBJECT:
+            factor_list = self.subject_district_df[SUBJECT].unique()
+        else:
+            factor_list = self.subject_district_df[DISTRICT].unique()
 
-        fin_df = pd.DataFrame({INDICATOR: [], 'factor': [], 'factor value': [], 'count': [], 'mean': [],
-                           'std': [], 'min': [], 'max': [], 'normality': []})
+        fin_df = pd.DataFrame({INDICATOR: [], 'factor': [], 'factor value': [], 'count': [],
+                               'mean': [], 'std': [], 'min': [], 'max': [], 'normality': []})
 
         for f in factor_list:
             sorted_df = df[df[factor] == f][INDICATOR]
@@ -40,29 +38,31 @@ class Analysis(object):
             if p > alpha:
                 pirson = True
 
-            fin_df.loc[len(fin_df)] = [indicator, factor, f, ds.loc['count'], ds.loc['mean'],
-                                   ds.loc['std'], ds.loc['min'], ds.loc['max'], pirson]
+            fin_df.loc[len(fin_df)] = [indicator, factor, f, round(ds.loc['count'], 2),
+                                       round(ds.loc['mean'], 2), round(ds.loc['std'], 2),
+                                       round(ds.loc['min'], 2), round(ds.loc['max'], 2), round(pirson, 2)]
 
         if os.path.exists(DESCRIPTIVE_NAME):
             read_df = pd.read_csv(DESCRIPTIVE_NAME)
             read_df = read_df.append(fin_df, ignore_index=True)
             read_df.drop_duplicates()
             read_df.to_csv(DESCRIPTIVE_NAME, index=False)
+            return read_df
         else:
             fin_df.to_csv(DESCRIPTIVE_NAME, index=False)
+            return fin_df
 
         # paintHist(file_name, indicator, factor)
-
 
     # Анализ динамических рядов
     def analysis_time_series(self, file_name):
         df = pd.read_csv(file_name)
 
-        districts = self.subject_district_list
+        districts = self.subject_district_df
         fin_df = pd.DataFrame()
         fin_general_df = pd.DataFrame()
 
-        for _,row in districts.iterrows():
+        for _, row in districts.iterrows():
             subject = row[SUBJECT]
             district = row[DISTRICT]
             data = df[(df[SUBJECT] == subject) & (df[DISTRICT] == district)]
@@ -189,7 +189,8 @@ class Analysis(object):
         name_x = gen_label(file1)
         name_y = gen_label(file2)
 
-        data = Data().combine_indicators(data_x, data_y, name_x, name_y)
+        data = combine_indicators(data_x, data_y, name_x, name_y,
+                                  self.years, self.regs)
         data = data.drop(data[data.isnull().T.any()].index)
 
         x = data[name_x].values
@@ -206,13 +207,34 @@ class Analysis(object):
         print(stderr)
 
         if abs(r) < 0.3:
-            print('Связь слабая')
+            print(CORRELATION[0])
         elif abs(r) > 0.6:
-            print('Связь тесная')
+            print(CORRELATION[2])
         else:
-            print('Связь умеренная')
+            print(CORRELATION[3])
 
         print(f'Regression line: y={intercept:.2f}+{slope:.2f}x\n'
-            f'Regression coefficient: r={r:.2f}')
+              f'Regression coefficient: r={r:.2f}')
 
         # paintCorrelation(fx, fy, slope, intercept, r, name_x, name_y)
+
+
+# объединение 2 показателей в один csv
+def combine_indicators(data_x, data_y, name_x, name_y, years, regs):
+    data = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], name_x: [], name_y: []})
+
+    for year in years:
+        for reg in regs:
+            subject = reg[0]
+            district = reg[1]
+            value1 = data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
+                            & (data_x[DISTRICT] == district)][INDICATOR].tolist()
+            value2 = data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
+                            & (data_y[DISTRICT] == district)][INDICATOR].tolist()
+            if (bool(value1) & bool(value2)):
+                data.loc[len(data)] = [year, subject, district,
+                                       float(data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
+                                                    & (data_x[DISTRICT] == district)][INDICATOR]),
+                                       float(data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
+                                                    & (data_y[DISTRICT] == district)][INDICATOR])]
+    return data

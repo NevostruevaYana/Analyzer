@@ -1,16 +1,11 @@
 from data import *
 from analysis import *
 import argparse
-from geojson_generator import *
+import geojson_generator
 from utils import *
 
 
 def main():
-    # Сброс ограничений на число столбцов
-    pd.set_option('display.max_columns', None)
-    # Сброс ограничений на количество символов в записи
-    pd.set_option('display.max_colwidth', None)
-
     parser = argparse.ArgumentParser('python main.py')
 
     parser.add_argument('-g', '--generate', action='store_true', help='Get csv')
@@ -45,19 +40,20 @@ def main():
     group = args.group
     geo = args.geo
 
-    analysis  = Analysis()
+    analysis = Analysis()
+    data = Data()
 
     if geo:
         file = args.file
         out_file = args.outfile
-        gen_geo_inc(file, out_file)
+        geojson_generator.gen_geo_inc(file, out_file)
 
     if generate:
         file = args.file
         sheets = args.sheets.split('&')
         prop_col_name = args.names.lower()
         value_col_name = args.values.lower()
-        generate_csv(file, sheets, prop_col_name, value_col_name)
+        data.generate_csv(file, sheets, prop_col_name, value_col_name)
 
     if indicator:
         file1 = args.file
@@ -65,7 +61,7 @@ def main():
         col_name = args.column
         out_file = args.outfile
         num = float(args.count)
-        create_indicator(file1, file2, col_name, out_file, num)
+        data.create_indicator(file1, file2, col_name, out_file, num)
 
     if descriptive_statistics:
         file_name = args.file

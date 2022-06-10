@@ -1,5 +1,3 @@
-import os
-import numpy as np
 from utils import *
 
 
@@ -50,30 +48,11 @@ class Data(object):
 
         df_hampel = hampel(df[INDICATOR])
         df[INDICATOR] = df_hampel
+        df = df.dropna()
 
         file_name = CSV_DATA + CSV_PROPERTY + out_file
         df.to_csv(file_name, index=False)
         # paintPointDiagram(df, INDICATOR, out_file)
-
-    # объединение 2 показателей в один csv
-    def combine_indicators(self, data_x, data_y, name_x, name_y):
-        data = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], name_x: [], name_y: []})
-
-        for year in self.years:
-            for reg in self.regs:
-                subject = reg[0]
-                district = reg[1]
-                value1 = data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
-                                & (data_x[DISTRICT] == district)][INDICATOR].tolist()
-                value2 = data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
-                                & (data_y[DISTRICT] == district)][INDICATOR].tolist()
-                if (bool(value1) & bool(value2)):
-                    data.loc[len(data)] = [year, subject, district,
-                                           float(data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
-                                                        & (data_x[DISTRICT] == district)][INDICATOR]),
-                                           float(data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
-                                                        & (data_y[DISTRICT] == district)][INDICATOR])]
-        return data
 
 
 # фильтр Хампела для обнаружения выбросов
@@ -116,6 +95,10 @@ def create_csv(sheet_name, xlsx_sheet, property, col_name, data_col_name):
 
 # создание нового показателя
 def create_new_csv_indicator(csv_1, csv_2, col_name, out_csv, num, years, regs):
+    # Сброс ограничений на число столбцов
+    pd.set_option('display.max_columns', None)
+    # Сброс ограничений на количество символов в записи
+    pd.set_option('display.max_colwidth', None)
     csv1 = pd.read_csv(csv_1)
     csv2 = pd.read_csv(csv_2)
 
