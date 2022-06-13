@@ -1,92 +1,56 @@
-from data import *
-from analysis import *
-import argparse
-import geojson_generator
+from data_generator import DataGenerator
+from analysis import Analysis
+from geojson_generator import generate_geojson_from_df
 from utils import *
 
 
 def main():
-    # Сброс ограничений на число столбцов
-    pd.set_option('display.max_columns', None)
-    # Сброс ограничений на количество символов в записи
-    pd.set_option('display.max_colwidth', None)
+    add_all_dir()
+    data = DataGenerator('health.xlsx')
 
-    parser = argparse.ArgumentParser('python main.py')
+    data.get_years_and_regs()
+    data_list = [(['11'], 'абсолютное значение'), (['23'], 'от 0-14 лет абс.'), (['23'], '15-17 лет абс.'),
+                 (['23'], 'от 18 абс.'), (['27'], '0-14 лет абс.'), (['27'], '15-17 лет абс.'), (['27'], '18-60 абс.'),
+                 (['28'], 'мужчины знач'), (['28'], 'женщины знач.'), (['31'], 'значение')]
+    for d in data_list:
+        data.generate_csv(d[0], d[1])
 
-    parser.add_argument('-g', '--generate', action='store_true', help='Get csv')
-    parser.add_argument('-i', '--create_indicator', action='store_true', help='Get csv with new indicator')
-    parser.add_argument('-ds', '--descriptive_statistics', action='store_true', help='Running descriptive statistics')
-    parser.add_argument('-ts', '--time_series', action='store_true', help='Running time series analysis')
-    parser.add_argument('-cr', '--correlation_regression', action='store_true',
-                        help='Running correlation regression analysis')
-    parser.add_argument('-gr', '--group', action='store_true', help='Get csv')
-    parser.add_argument('-geo', '--geo', action='store_true', help='Get csv')
-
-    parser.add_argument('-f', '--file', type=str, help='Input xlsx (csv) file')
-    parser.add_argument('-f2', '--file2', type=str, help='Input csv file2')
-    parser.add_argument('-fout', '--outfile', type=str, help='Output csv file')
-
-    parser.add_argument('-s', '--sheets', type=str, help='Only some sheets')
-    parser.add_argument('-n', '--names', type=str, help='Name')
-    parser.add_argument('-y', '--year', type=str, help='Year')
-    parser.add_argument('-fct', '--factor', type=str, help='Factor name')
-    parser.add_argument('-v', '--values', type=str, help='Column name with values')
-    parser.add_argument('-c', '--count', type=str, help='Some number')
-    parser.add_argument('-d', '--dependency', action='store_true', help='Dependent sample or not')
-    parser.add_argument('-col', '--column', default=INDICATOR, help='Dependent sample or not')
-
-    args = parser.parse_args()
-
-    generate = args.generate
-    descriptive_statistics = args.descriptive_statistics
-    indicator = args.create_indicator
-    time_series = args.time_series
-    correlation_regression = args.correlation_regression
-    group = args.group
-    geo = args.geo
+    property_list = [[CSV_11, CSV_11_IND[10], CSV_11, CSV_11_IND[0], 'смертность на 100 тыс. нас.', 100000],
+                     [CSV_31, CSV_31_IND[16], CSV_11, CSV_11_IND[0], 'количество врачей на 100 тыс. нас.', 100000],
+                     [CSV_23_0_14, CSV_23_IND[0], CSV_11, CSV_11_IND[2], 'заболеваемость 0-14 лет на 100 тыс. нас.', 100000],
+                     [CSV_23_0_14, CSV_23_IND[0], CSV_11, CSV_11_IND[4], 'заболеваемость 15-17 лет на 100 тыс. нас.', 100000],
+                     [CSV_11, CSV_11_IND[11], CSV_11, CSV_11_IND[3], 'младенческая смертность на 1000 нас.', 1000]]
+    for p in property_list:
+        data.create_property(p[0], p[1], p[2], p[3], p[4], p[5])
 
     analysis = Analysis()
-    data = Data()
 
-    if geo:
-        file = args.file
-        out_file = args.outfile
-        geojson_generator.gen_geo_inc(file, out_file)
+    descriptive_stat_list = [[CSV_PROP, 'смертность на 100 тыс. нас.', YEAR],
+                             [CSV_PROP, 'смертность на 100 тыс. нас.', SUBJECT]]
+    for d in descriptive_stat_list:
+        analysis.descriptive_stat(d[0], d[1], d[2])
 
-    if generate:
-        file = args.file
-        sheets = args.sheets.split('&')
-        prop_col_name = args.names.lower()
-        value_col_name = args.values.lower()
-        data.generate_csv(file, sheets, prop_col_name, value_col_name)
+    time_series_list = [(CSV_11, CSV_11_IND[0])]
+    for t in time_series_list:
+        analysis.time_series(t[0], t[1])
 
-    if indicator:
-        file1 = args.file
-        file2 = args.file2
-        col_name = args.column
-        out_file = args.outfile
-        num = float(args.count)
-        data.create_indicator(file1, file2, col_name, out_file, num)
+    group_comparison_list = [[CSV_PROP, 'заболеваемость 0-14 лет на 100 тыс. нас.', CSV_PROP,
+                                    'заболеваемость 15-17 лет на 100 тыс. нас.', False]]
+    for g in group_comparison_list:
+        analysis.group_comparison(g[0], g[1], g[2], g[3], g[4])
 
-    if descriptive_statistics:
-        file_name = args.file
-        factor = args.factor
-        analysis.descriptive_st(file_name, factor)
+    corr_regr_list = [[[CSV_27_18_60, CSV_28_B], ['число случаев временной нетрудоспособности'], [
+                            'психические расстройства, всего',
+                            'невротические, связанные со стрессом и соматоформные расстройства',
+                            'синдром зависимости от алкоголя (алкоголизм)',
+                            'синдром зависимости от наркотических веществ (наркомания)']]]
+    for c in corr_regr_list:
+        analysis.multiple_corr_regr(c[0], c[1], c[2])
 
-    if time_series:
-        file_name = args.file
-        analysis.analysis_time_series(file_name)
-
-    if group:
-        file = args.file
-        file2 = args.file2
-        dependency = args.dependency
-        analysis.group_comparison(file, file2, dependency)
-
-    if correlation_regression:
-        file1 = args.file
-        file2 = args.file2
-        analysis.corr_regression(file1, file2)
+    generate_geojson_from_df('geojson_data/districts/здоровьеАрхангельска.geojson',
+                             TIME_SERIES_DIR + '/общая численность населения, всего.csv',
+                                               'прирост', 'abs inc chain&growth inc of chain, %',
+                                               'abs&pace in percent', 'geojson_data/pace.geojson')
 
 
 # Предполагается обязательное наличие колонок Год, Район, Субъект

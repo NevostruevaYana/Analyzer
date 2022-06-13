@@ -2,30 +2,28 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from utils import *
 import seaborn as sns
+from sklearn.metrics import r2_score
 
 
 class Analysis(object):
 
     def __init__(self):
         district_csv = pd.read_csv(DISTRICT_CSV)
-        self.years = pd.read_csv(YEARS_CSV)[YEAR].values
-        self.regs = district_csv[[SUBJECT, DISTRICT]].values
-        self.subject_district_df = district_csv
+        self.years_df = pd.read_csv(YEARS_CSV)
+        self.subjects_districts_df = district_csv
 
     # Описательная статистика
-    def descriptive_st(self, file_name, property, factor):
+    def descriptive_stat(self, file_name, property, factor):
         assert factor in [YEAR, SUBJECT, DISTRICT], 'Некорректный фактор анализа'
 
         df = pd.read_csv(file_name)
 
         if factor == YEAR:
-            factor_list = self.years
-        elif factor == SUBJECT:
-            factor_list = self.subject_district_df[SUBJECT].unique()
+            factor_list = self.years_df[YEAR].values
         else:
-            factor_list = self.subject_district_df[DISTRICT].unique()
+            factor_list = self.subjects_districts_df[SUBJECT].unique()
 
-        fin_df = pd.DataFrame({INDICATOR: [], 'factor': [], 'factor value': [], 'count': [],
+        fin_df = pd.DataFrame({INDICATOR_GEO: [], 'factor': [], 'factor value': [], 'count': [],
                                'mean': [], 'std': [], 'min': [], 'max': [], 'normality': []})
 
         for f in factor_list:
@@ -47,16 +45,16 @@ class Analysis(object):
                                        round(ds.loc['mean'], 2), round(ds.loc['std'], 2),
                                        round(ds.loc['min'], 2), round(ds.loc['max'], 2), round(pirson, 2)]
 
-        append_row_to_file(DESCRIPTIVE_NAME, fin_df)
+        append_row_to_file(f'{DESCRIPTIVE_DIR}{RES}', fin_df)
 
         # paintHist(file_name, indicator, factor)
 
     # Анализ динамических рядов
-    def analysis_time_series(self, file_name, property):
+    def time_series(self, file_name, property):
         df = pd.read_csv(file_name)
         out_name = property.replace(':', ',')
 
-        districts = self.subject_district_df
+        districts = self.subjects_districts_df
         fin_df = pd.DataFrame()
         fin_general_df = pd.DataFrame()
 
@@ -90,9 +88,9 @@ class Analysis(object):
                 growth_inc_of_chain.append(round(jj - 100, 2))
                 first_ind = i
 
-            prop_list = ['абсолют. прирост базисных', 'абсолют. прирост цепных',
-                         'темп роста базисных, %', 'темп роста цепных, %',
-                         'темп прироста базисных, %', 'темп прироста цепных, %']
+            prop_list = ['abs inc basic', 'abs inc chain',
+                         'growth rate of basic, %', 'growth rate of chain, %',
+                         'growth inc of basic, %', 'growth inc of chain, %']
 
             data.insert(data.shape[1], prop_list[0], abs_inc_basic)
             data.insert(data.shape[1], prop_list[1], abs_inc_chain)
@@ -104,9 +102,8 @@ class Analysis(object):
             with_year = str(years_list[0])
             on_year = str(years_list[len(years_list) - 1])
 
-            general_df = pd.DataFrame({SUBJECT: [], DISTRICT: [], 'период': [], 'средний уровень ряда': [],
-                                       'средний абс. прирост': [], 'средний темп роста, %': [],
-                                       'средний темп прироста, %': [], })
+            general_df = pd.DataFrame({SUBJECT_GEO: [], DISTRICT_GEO: [], 'period': [], 'av_row': [],
+                                       'av abs inc': [], 'av growth rate, %': [], 'av inc rate, %': []})
 
             if data.shape[0] != 1:
                 av_row = (0.5 * (f_ind[0] + f_ind[len(f_ind) - 1]) + sum(f_ind[1:len(f_ind) - 1])) / (data.shape[0] - 1)
@@ -122,19 +119,21 @@ class Analysis(object):
             fin_df = fin_df.append(data[[YEAR, SUBJECT, DISTRICT] + prop_list], ignore_index=True)
             fin_general_df = fin_general_df.append(general_df, ignore_index=True)
 
-        print(fin_df)
-        fin_df.to_csv(TIME_SERIES_NAME + out_name + CSV, index=False)
-        fin_general_df.to_csv(TIME_SERIES_NAME + 'gen_' + out_name + CSV, index=False)
+        fin_df.to_csv(TIME_SERIES_DIR + out_name + CSV, index=False)
+        fin_general_df.to_csv(TIME_SERIES_DIR + 'gen_' + out_name + CSV, index=False)
 
-    def group_comparison(self, file, file2, dependency):
-        data = pd.read_csv(file)
-        data2 = pd.read_csv(file2)
+    def group_comparison(self, file_name_1, property_1, file_name_2, property_2, dependency):
+        data = pd.read_csv(file_name_1)
+        x = data[property_1]
 
-        name = gen_label(file)
-        name2 = gen_label(file2)
+        if file_name_1 == file_name_2:
+            y = data[property_2]
+        else:
+            data_2 = pd.read_csv(file_name_2)
+            y = data_2[property_2]
 
-        x = data[INDICATOR]
-        y = data2[INDICATOR]
+        x = x.dropna()
+        y = y.dropna()
 
         df = pd.DataFrame({'group 1': [], 'group 2': [], 'mean 1': [], 'mean 2': [],
                            'std 1': [], 'std 2': [], 'the presence of differences': []})
@@ -173,78 +172,74 @@ class Analysis(object):
         if t[1] > 0.05:
             difference = False
 
-        df.loc[len(df)] = [name, name2, mean_1, mean_2, std_1, std_2, difference]
+        df.loc[len(df)] = [property_1, property_2, mean_1, mean_2, std_1, std_2, difference]
 
-        append_row_to_file(GROUP_COMPARISON_NAME, df)
+        append_row_to_file(f'{GROUP_COMPARISON_DIR}{RES}', df)
 
         # paintBox(data, data2, name, name2)
 
-    def corr_regression(self, file1, file2):
-        data_x = pd.read_csv(file1)
-        data_y = pd.read_csv(file2)
+    # корреляционная регрессия (возможна как линейная, так и множественная)
+    def multiple_corr_regr(self, files_list, properties_list_x, properties_list_y):
+        properties_list = properties_list_x + properties_list_y
 
-        name_x = gen_label(file1)
-        name_y = gen_label(file2)
+        data = pd.read_csv(files_list[0])
 
-        data = combine_indicators(data_x, data_y, name_x, name_y,
-                                  self.years, self.regs)
-        data = data.drop(data[data.isnull().T.any()].index)
+        if len(files_list) > 1:
+            for i in range(1, len(files_list)):
+                data_ = pd.read_csv(files_list[i])
+                data = pd.concat([data, data_], axis=1)
 
-        x = data[name_x].values
-        y = data[name_y].values
-
-        fx = [float(n) for n in x]
-        fy = [float(n) for n in y]
-
-        slope, intercept, r, p, stderr = stats.linregress(fx, fy)
-        print(slope)
-        print(intercept)
-        print(r)
-        print(p)
-        print(stderr)
-
-        if abs(r) < 0.3:
-            print(CORRELATION[0])
-        elif abs(r) > 0.6:
-            print(CORRELATION[2])
+        if properties_list:
+            data = data[properties_list]
         else:
-            print(CORRELATION[3])
+            data = data.drop(columns=[YEAR, SUBJECT, DISTRICT])
 
-        print(f'Regression line: y={intercept:.2f}+{slope:.2f}x\n'
-              f'Regression coefficient: r={r:.2f}')
+        data = data.dropna(how='all')
 
-        # paintCorrelation(fx, fy, slope, intercept, r, name_x, name_y)
+        corr_matrix = data.corr()
+        print(corr_matrix)
 
+        fig, ax = plt.subplots(figsize=(10, 10))
+        fig.subplots_adjust(0.15, 0.15, 0.83, 0.83)
+        sns.heatmap(corr_matrix, ax=ax, cmap="YlGnBu", linewidths=0.1, annot=True)
+        plt.savefig('fig.png')
 
-# объединение 2 показателей в один csv
-def combine_indicators(data_x, data_y, name_x, name_y, years, regs):
-    data = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], name_x: [], name_y: []})
+        fin_df = pd.DataFrame({'property_1': [], 'property_2': [], 'corr_coeff': [],
+                               'stderr': [], 'R^2': []})
 
-    for year in years:
-        for reg in regs:
-            subject = reg[0]
-            district = reg[1]
-            value1 = data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
-                            & (data_x[DISTRICT] == district)][INDICATOR].tolist()
-            value2 = data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
-                            & (data_y[DISTRICT] == district)][INDICATOR].tolist()
-            if (bool(value1) & bool(value2)):
-                data.loc[len(data)] = [year, subject, district,
-                                       float(data_x[(data_x[YEAR] == year) & (data_x[SUBJECT] == subject)
-                                                    & (data_x[DISTRICT] == district)][INDICATOR]),
-                                       float(data_y[(data_y[YEAR] == year) & (data_y[SUBJECT] == subject)
-                                                    & (data_y[DISTRICT] == district)][INDICATOR])]
-    return data
+        for x in properties_list_x:
+            for y in properties_list_y:
+                print(x + '  ' + y)
+                d = data[[x, y]]
+                d = d.dropna(how='any')
+                print(len(d))
+                cor = d[x].corr(d[y])
+                print('corr = ' + str(cor))
+                r2 = r2_score(d[x], d[y])
+                print('r2 = ' + str(r2))
 
+                if abs(cor) < 0.3:
+                    c = CORRELATION[0]
+                elif abs(cor) > 0.6:
+                    c = CORRELATION[1]
+                else:
+                    c = CORRELATION[2]
+                print(c)
 
-@staticmethod
-def t(df, df2):
-    f = pd.read_csv(df)
-    f2 = pd.read_csv(df2)
-    f['смертность'] = f2['смертность на 100 тыс. нас.']
-    h = f.corr()
-    print(f.corr())
-    fig, ax = plt.subplots(figsize=(12, 10))
-    fig.subplots_adjust(0.25, 0.25, 0.93, 0.93)
-    sns.heatmap(h, ax=ax, cmap="YlGnBu", linewidths=0.1, annot=True)
-    plt.show()
+                slope, intercept, r, p, stderr = stats.linregress(d[x], d[y])
+
+                fin_df.loc[len(fin_df)] = [x, y, round(cor, 2), round(stderr, 2), round(r2, 2)]
+
+                # line = slope * d[x] + intercept
+                #
+                # plt.scatter(d[x], d[y], s=50)
+                # plt.plot(d[x], line, 'r', label='y={:.2f}x+{:.2f}'.format(slope, intercept))
+                # plt.plot([], [], ' ', label='R_sq = ' + '{:.2f}'.format(r ** 2))
+                #
+                # plt.grid(True)
+                # plt.legend(fontsize=12)
+                # plt.xlabel(x)
+                # plt.ylabel(x)
+                # plt.show()
+
+        append_row_to_file(f'{CORR_REGR_DIR}{RES}', fin_df)

@@ -1,15 +1,16 @@
+import numpy as np
 from utils import *
 
 
-class Data(object):
+class DataGenerator(object):
 
-    def __init__(self):
-        self.years = pd.read_csv(YEARS_CSV)[YEAR].values
-        self.regs = pd.read_csv(DISTRICT_CSV)[[SUBJECT, DISTRICT]].values
+    def __init__(self, file_name):
+        assert (EXCEL in file_name) | (os.path.exists(file_name)), 'Некорректное имя файла'
+        self.file_name = file_name
 
     # получение и запись полного списка лет и регионов
-    def get_years_and_regs(self, file, sheet):
-        xlsx_sheet = pd.read_excel(file, sheet)
+    def get_years_and_regs(self):
+        xlsx_sheet = pd.read_excel(self.file_name, '11')
 
         xlsx_sheet.columns = xlsx_sheet.columns.str.lower()
 
@@ -20,8 +21,11 @@ class Data(object):
         districts.to_csv(DISTRICT_CSV, index=False)
 
     # генерация csv-файлов из excel (конвертация бд)
-    def generate_csv(self, file_name, sheets, prop_col_name, value_col_name):
-        xlsx = pd.ExcelFile(file_name)
+    def generate_csv(self, sheets, value_col_name):
+        years = pd.read_csv(YEARS_CSV)[YEAR].values
+        districts = pd.read_csv(DISTRICT_CSV)[[SUBJECT, DISTRICT]].values
+
+        xlsx = pd.ExcelFile(self.file_name)
         if sheets is None:
             sheets = xlsx.sheet_names
 
@@ -31,22 +35,22 @@ class Data(object):
 
             xlsx_sheet.columns = xlsx_sheet.columns.str.lower()
 
-            properties = get_lower_list(xlsx_sheet, prop_col_name)
+            properties = get_lower_list(xlsx_sheet, INDICATOR)
             print(properties)
 
             df_list = []
             for property in properties:
-                df = create_csv(xlsx_sheet, property, prop_col_name, value_col_name)
+                df = create_csv(xlsx_sheet, property, INDICATOR, value_col_name)
                 df_list.append(df)
 
-            df = combine_many_indicators(df_list, properties, self.years, self.regs)
+            df = combine_many_indicators(df_list, properties, years, districts)
 
-            df = count_arzf(df)
-            df.to_csv(CSV_DATA + sheet_name + '_' + value_col_name + CSV, index=False)
+            df = add_azrf(df)
+            df.to_csv(DATA_DIR + sheet_name + '_' + value_col_name + CSV, index=False)
 
     # создание нового показателя
 
-    def create_indicator(self, csv1, col1, csv2, col2, col_fin, num):
+    def create_property(self, csv1, col1, csv2, col2, col_fin, num):
         csv = pd.read_csv(csv1)
         csv2 = pd.read_csv(csv2)
 
@@ -59,7 +63,6 @@ class Data(object):
 
         df_hampel = hampel(df[col_fin])
         df[col_fin] = df_hampel
-        # df = df.dropna()
 
         append_col_to_file(CSV_PROP, df, col_fin)
 
@@ -124,7 +127,7 @@ def combine_many_indicators(data_list, properties, years, regs):
     return df
 
 
-def count_arzf(df):
+def add_azrf(df):
     columns = df.columns.tolist()
     del columns[0:3]
     columns_len = len(columns)

@@ -1,6 +1,5 @@
 import pandas as pd
 import os
-import numpy as np
 
 YEAR = 'год'
 YEAR_GEO = 'year'
@@ -15,11 +14,15 @@ SPACE = ' '
 YEARS_CSV = 'csv_data/годы.csv'
 DISTRICT_CSV = 'csv_data/районы.csv'
 CSV = '.csv'
+EXCEL = '.xlsx'
 NONE_STR = 'None'
-CSV_DATA = 'csv_data/'
-DESCRIPTIVE_NAME = 'csv_data/analysis/descriptive_st/results.csv'
-TIME_SERIES_NAME = 'csv_data/analysis/time_series/'
-GROUP_COMPARISON_NAME = 'csv_data/analysis/group_comparison/results.csv'
+DATA_DIR = 'csv_data/'
+ANALYSIS_DIR = 'csv_data/analysis/'
+RES = 'results.csv'
+DESCRIPTIVE_DIR = 'csv_data/analysis/descriptive_stat/'
+TIME_SERIES_DIR = 'csv_data/analysis/time_series/'
+GROUP_COMPARISON_DIR = 'csv_data/analysis/group_comparison/'
+CORR_REGR_DIR = 'csv_data/analysis/corr_regr/'
 CSV_PROP = 'csv_data/new_properties.csv'
 CORRELATION = ['слабая', 'сильная', 'умеренная']
 
@@ -81,24 +84,24 @@ CSV_23_IND = ['заболеваемость всего:',                       
     'гастрит и дуоденит',                                                   # 8
     'мочекаменная болезнь',                                                 # 9
     'врожденные аномалии (пороки развития), деформации и хромосомные нарушения у детей'] # 10
-CSV_27_0_14 = 'csv_data/23_от 0-14 лет абс..csv'
-CSV_27_15_17 = 'csv_data/23_15-17 лет абс..csv'
-CSV_27_18_60 = 'csv_data/23_23_от 18 абс..csv'
+CSV_27_0_14 = 'csv_data/27_0-14 лет абс..csv'
+CSV_27_15_17 = 'csv_data/27_15-17 лет абс..csv'
+CSV_27_18_60 = 'csv_data/27_18-60 абс..csv'
 CSV_27_IND = ['психические расстройства, всего'                                 # 0
     'невротические, связанные со стрессом и соматоформные расстройства'         # 1
     'другие непсихотические расстройства'                                       # 2
     'синдром зависимости от алкоголя (алкоголизм)'                              # 3
     'синдром зависимости от наркотических веществ (наркомания)'                 # 4
     'поведенческие синдромы, непсихотические расстройства детского и подросткового возраста'] # 5
-CSV_28_B = '28_мужчины знач.csv'
-CSV_28_G = '28_женщины знач..csv'
+CSV_28_B = 'csv_data/28_мужчины знач.csv'
+CSV_28_G = 'csv_data/28_женщины знач..csv'
 CSV_28_IND = ['число дней временной нетрудоспособности'
     'число случаев временной нетрудоспособности']
 
 
 # изъятие основной части файла -
 # удаление префикса и постфикса (расширения)
-def gen_label(name):
+def gen_name(name):
     return name.split('/').pop().removesuffix(CSV)
 
 
@@ -121,3 +124,11 @@ def append_col_to_file(file_name, df, col_name):
         read_df.to_csv(file_name, index=False)
     else:
         df.to_csv(file_name, index=False)
+
+# создание всех директорий
+def add_all_dir():
+    dir_list = [DATA_DIR, ANALYSIS_DIR, DESCRIPTIVE_DIR,
+                TIME_SERIES_DIR, CORR_REGR_DIR, GROUP_COMPARISON_DIR]
+    for dir in dir_list:
+        if not os.path.exists(dir):
+            os.mkdir(dir.removesuffix('/'))

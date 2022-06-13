@@ -1,7 +1,5 @@
 import json
-import pandas as pd
-from utils import YEAR, SUBJECT, DISTRICT, DISTRICT_CSV, \
-    INDICATOR, YEAR_GEO, SUBJECT_GEO, DISTRICT_GEO, INDICATOR_GEO
+from utils import *
 
 
 def generate_geojson_from_df(file_geo, file_df, indicator, column_names,
