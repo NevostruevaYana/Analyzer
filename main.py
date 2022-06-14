@@ -16,17 +16,20 @@ def main():
         data.generate_csv(d[0], d[1])
 
     property_list = [[CSV_11, CSV_11_IND[10], CSV_11, CSV_11_IND[0], 'смертность на 100 тыс. нас.', 100000],
+                     [CSV_11, CSV_11_IND[8], CSV_11, CSV_11_IND[0], 'рождаемость на 100 тыс. нас.', 100000],
+                     [CSV_PROP, CSV_PROP_IND[1], CSV_PROP, CSV_PROP_IND[0], 'естеств. прирост на 100 тыс. нас.', -1],
                      [CSV_31, CSV_31_IND[16], CSV_11, CSV_11_IND[0], 'количество врачей на 100 тыс. нас.', 100000],
                      [CSV_23_0_14, CSV_23_IND[0], CSV_11, CSV_11_IND[2], 'заболеваемость 0-14 лет на 100 тыс. нас.', 100000],
-                     [CSV_23_0_14, CSV_23_IND[0], CSV_11, CSV_11_IND[4], 'заболеваемость 15-17 лет на 100 тыс. нас.', 100000],
+                     [CSV_23_15_17, CSV_23_IND[0], CSV_11, CSV_11_IND[4], 'заболеваемость 15-17 лет на 100 тыс. нас.', 100000],
+                     [CSV_23_18_, CSV_23_IND[0], CSV_11, CSV_11_IND[5], 'заболеваемость от 18 лет на 100 тыс. нас.',100000],
                      [CSV_11, CSV_11_IND[11], CSV_11, CSV_11_IND[3], 'младенческая смертность на 1000 нас.', 1000]]
     for p in property_list:
         data.create_property(p[0], p[1], p[2], p[3], p[4], p[5])
 
     analysis = Analysis()
 
-    descriptive_stat_list = [[CSV_PROP, 'смертность на 100 тыс. нас.', YEAR],
-                             [CSV_PROP, 'смертность на 100 тыс. нас.', SUBJECT]]
+    descriptive_stat_list = [[CSV_PROP, CSV_PROP_IND[0:3], YEAR],
+                             [CSV_PROP, CSV_PROP_IND[0:3], SUBJECT]]
     for d in descriptive_stat_list:
         analysis.descriptive_stat(d[0], d[1], d[2])
 

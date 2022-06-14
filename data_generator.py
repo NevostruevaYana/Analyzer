@@ -1,4 +1,5 @@
 import numpy as np
+
 from utils import *
 
 
@@ -36,7 +37,6 @@ class DataGenerator(object):
             xlsx_sheet.columns = xlsx_sheet.columns.str.lower()
 
             properties = get_lower_list(xlsx_sheet, INDICATOR)
-            print(properties)
 
             df_list = []
             for property in properties:
@@ -58,7 +58,11 @@ class DataGenerator(object):
 
         df = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], col_fin: []})
         for _, row in csv.iterrows():
-            df.loc[len(df)] = [row[YEAR], row[SUBJECT], row[DISTRICT],
+            if num == -1:
+                df.loc[len(df)] = [row[YEAR], row[SUBJECT], row[DISTRICT],
+                                   row[col1] - row[col2]]
+            else:
+                df.loc[len(df)] = [row[YEAR], row[SUBJECT], row[DISTRICT],
                                row[col1] / row[col2] * num]
 
         df_hampel = hampel(df[col_fin])
@@ -66,7 +70,7 @@ class DataGenerator(object):
 
         append_col_to_file(CSV_PROP, df, col_fin)
 
-        # paintPointDiagram(df, INDICATOR, out_file)
+    # paintPointDiagram(df, INDICATOR, out_file)
 
 
 # фильтр Хампела для обнаружения выбросов
@@ -103,7 +107,6 @@ def create_csv(xlsx_sheet, property, col_name, data_col_name):
 
 def combine_many_indicators(data_list, properties, years, regs):
     columns = list(properties)
-
     df = pd.DataFrame(columns=[YEAR, SUBJECT, DISTRICT] + columns)
 
     for year in years:
@@ -113,7 +116,7 @@ def combine_many_indicators(data_list, properties, years, regs):
             row_list = []
             for idx, data in enumerate(data_list):
                 value = data[(data[YEAR] == year) & (data[SUBJECT] == subject) &
-                      (data[DISTRICT] == district)][columns[idx]]
+                                 (data[DISTRICT] == district)][columns[idx]]
                 if bool(value.tolist()):
                     try:
                         row_list.append(float(value))
