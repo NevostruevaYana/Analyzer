@@ -1,4 +1,5 @@
-import matplotlib.pyplot as plt
+import pandas as pd
+
 from graphics import Graphics
 from scipy import stats
 from utils import *
@@ -47,7 +48,6 @@ class Analysis(object):
                                            round(ds.loc['min'], 2), round(ds.loc['max'], 2), round(pirson, 2)]
 
         append_row_to_file(f'{DESCRIPTIVE_DIR}{RES}', fin_df)
-
         self.g.plot_descr_stat(fin_df)
 
     # Анализ динамических рядов
@@ -77,7 +77,6 @@ class Analysis(object):
             first_ind = f_ind[0]
 
             for i in f_ind:
-
                 i = round(i, 2)
                 abs_inc_basic.append(round(i - f_ind[0], 2))
                 abs_inc_chain.append(round(i - first_ind, 2))
@@ -117,8 +116,6 @@ class Analysis(object):
                                                    round(av_growth_rate, 2), round(av_inc_rate, 2)]
 
             data[INDICATOR_GEO] = property
-            # data = data.dropna(how='any')
-            general_df = general_df.dropna(how='any')
             fin_df = fin_df.append(data[[INDICATOR_GEO, YEAR, SUBJECT, DISTRICT] + prop_list], ignore_index=True)
             fin_general_df = fin_general_df.append(general_df, ignore_index=True)
 
@@ -127,6 +124,7 @@ class Analysis(object):
         append_row_to_file(f'{TIME_SERIES_DIR}gen_{RES}', fin_general_df)
 
     def group_comparison(self, file_name_1, property_1, file_name_2, property_2, dependency):
+
         data = pd.read_csv(file_name_1)
         x = data[property_1]
 
@@ -176,6 +174,10 @@ class Analysis(object):
         if t[1] > 0.05:
             difference = False
 
+        if property_1 == property_2:
+            property_1 = f'{gen_name(file_name_1)}_{property_1}'
+            property_2 = f'{gen_name(file_name_2)}_{property_2}'
+
         df.loc[len(df)] = [property_1, property_2, mean_1, mean_2, std_1, std_2, difference]
 
         append_row_to_file(f'{GROUP_COMPARISON_DIR}{RES}', df)
@@ -202,7 +204,12 @@ class Analysis(object):
 
         corr_matrix = data.corr()
 
-        self.g.plot_corr_matrix(corr_matrix)
+        try:
+            png_name = len(pd.read_csv(CORR_REGR_DIR + RES))
+        except FileNotFoundError:
+            png_name = '1'
+
+        self.g.plot_corr_matrix(corr_matrix, png_name)
 
         fin_df = pd.DataFrame({'property_1': [], 'property_2': [], 'corr_coeff': [],
                                'stderr': [], 'R^2': []})
@@ -212,11 +219,11 @@ class Analysis(object):
                 print(x + '  ' + y)
                 d = data[[x, y]]
                 d = d.dropna(how='any')
-                print(len(d))
-                cor = d[x].corr(d[y])
-                print('corr = ' + str(cor))
+
+                slope, intercept, r, p, stderr = stats.linregress(d[x], d[y])
+                print(p)
                 r2 = r2_score(d[x], d[y])
-                print('r2 = ' + str(r2))
+                cor = r
 
                 if abs(cor) < 0.3:
                     c = CORRELATION[0]
@@ -226,9 +233,7 @@ class Analysis(object):
                     c = CORRELATION[2]
                 print(c)
 
-                slope, intercept, r, p, stderr = stats.linregress(d[x], d[y])
-
-                fin_df.loc[len(fin_df)] = [x, y, round(cor, 2), round(stderr, 2), round(r2, 2)]
+                fin_df.loc[len(fin_df)] = [x, y, round(cor, 2), round(stderr, 2), round(r**2, 2)]
 
                 self.g.plot_corr_gegr(d[x], d[y], x, y, slope, intercept, cor, r2)
 

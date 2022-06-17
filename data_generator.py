@@ -22,31 +22,29 @@ class DataGenerator(object):
         districts.to_csv(DISTRICT_CSV, index=False)
 
     # генерация csv-файлов из excel (конвертация бд)
-    def generate_csv(self, sheets, value_col_name):
+    def generate_csv(self, sheet, value_col_name):
         years = pd.read_csv(YEARS_CSV)[YEAR].values
         districts = pd.read_csv(DISTRICT_CSV)[[SUBJECT, DISTRICT]].values
 
         xlsx = pd.ExcelFile(self.file_name)
-        if sheets is None:
-            sheets = xlsx.sheet_names
+        assert sheet in xlsx.sheet_names, 'Некорректнй лист'
 
         # read all sheets
-        for sheet_name in sheets:
-            xlsx_sheet = pd.read_excel(xlsx, sheet_name)
+        xlsx_sheet = pd.read_excel(xlsx, sheet)
 
-            xlsx_sheet.columns = xlsx_sheet.columns.str.lower()
+        xlsx_sheet.columns = xlsx_sheet.columns.str.lower()
 
-            properties = get_lower_list(xlsx_sheet, INDICATOR)
+        properties = get_lower_list(xlsx_sheet, INDICATOR)
 
-            df_list = []
-            for property in properties:
-                df = create_csv(xlsx_sheet, property, INDICATOR, value_col_name)
-                df_list.append(df)
+        df_list = []
+        for property in properties:
+            df = create_csv(xlsx_sheet, property, INDICATOR, value_col_name)
+            df_list.append(df)
 
-            df = combine_many_indicators(df_list, properties, years, districts)
+        df = combine_many_indicators(df_list, properties, years, districts)
 
-            df = add_azrf(df)
-            df.to_csv(DATA_DIR + sheet_name + '_' + value_col_name + CSV, index=False)
+        df = add_azrf(df)
+        df.to_csv(DATABASE_DIR + sheet + '_' + value_col_name + CSV, index=False)
 
     # создание нового показателя
 
@@ -67,7 +65,6 @@ class DataGenerator(object):
 
         df_hampel = hampel(df[col_fin])
         df[col_fin] = df_hampel
-
         append_col_to_file(CSV_PROP, df, col_fin)
 
     # paintPointDiagram(df, INDICATOR, out_file)

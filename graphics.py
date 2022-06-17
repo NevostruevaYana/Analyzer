@@ -5,22 +5,6 @@ from utils import *
 
 class Graphics(object):
 
-    def __init__(self):
-        self.colors = ['g', 'b', 'y', 'r', 'k', 'm', 'c']
-
-    def paintCorrelation(self, x, y, slope, intercept, r, name_x, name_y):
-        fig, ax = plt.subplots()
-
-        ax.scatter(x, y, c='k', s=2, label='Data points')
-        ffy = [x * slope + intercept for x in x]
-        line = f'Regression line: y={intercept:.2f}+{slope:.2f}x\nr={r:.2f}'
-        ax.plot(x, ffy, label=line)
-
-        ax.set_xlabel(name_x)
-        ax.set_ylabel(name_y)
-        ax.legend(facecolor='white')
-        plt.show()
-
     def plot_descr_stat(self, df):
         print(df)
         ind_list = df[INDICATOR_GEO].unique()
@@ -50,7 +34,7 @@ class Graphics(object):
                 y = df[(df['indicator'] == i) & (df['factor'] == g)]['mean']
                 if not (x.empty | y.empty):
                     ax.plot(x, y, marker='o', label=i)
-            plt.title('Сравнение показателей')
+            plt.title('Сравнение показателей \'mean\'')
             plt.xlabel(g)
             if g == YEAR:
                 ax.legend(fontsize=8, loc='upper center', bbox_to_anchor=(0.5, -0.25),
@@ -64,6 +48,8 @@ class Graphics(object):
 
     def plot_time_series(self, df):
         subjects = df[SUBJECT].unique()
+        indicator = df[INDICATOR_GEO].unique()
+        indicator = indicator[0].replace(':', ',')
         for subject in subjects:
             df_ = df[df[SUBJECT] == subject]
             districts = df_[DISTRICT].unique()
@@ -75,13 +61,13 @@ class Graphics(object):
                 if not (x.empty | y.empty):
                     ax.plot(x, y, marker='o', label=district)
             ax.grid(True)
-            ax.set_title('Абсолютный прирост базисных показателя\n')
+            ax.set_title(f'Абсолютный прирост базисных показателя\n\'{indicator}\''
+                         f'\n{subject}')
             plt.legend(fontsize=8, loc='upper center', bbox_to_anchor=(0.5, -0.3),
           fancybox=True, shadow=True, ncol=2)
             ax.set_xlabel('Год')
-            ax.set_ylabel('Показатель')
             plt.tight_layout()
-            plt.savefig(f'{TIME_SERIES_DIR}{subject}.png')
+            plt.savefig(f'{TIME_SERIES_DIR}{indicator}_{subject}.png')
 
     def plot_box(self, data, data2, name, name2):
         fig, ax = plt.subplots()
@@ -103,23 +89,28 @@ class Graphics(object):
         for indicator in ind_list:
             data_list.append(df[indicator].dropna())
             print(data_list)
+        fig, ax = plt.subplots()
         plt.boxplot(data_list,
                     labels=ind_list)
         plt.xticks(rotation=20, fontsize=8, ha='right')
+        ax.set_title(f'Сравнение групп для показателей \'{out_name}\'')
+        ax.set_xlabel('показатели')
         plt.tight_layout()
         plt.grid()
-        plt.savefig(f'{GROUP_COMPARISON_DIR}{out_name}.png')
+        plt.savefig(f'{GROUP_COMPARISON_DIR}{out_name}')
 
 
-    def plot_corr_matrix(self, corr_matrix):
+    def plot_corr_matrix(self, corr_matrix, png_name):
         fig, ax = plt.subplots(figsize=(10, 10))
         sns.heatmap(corr_matrix, ax=ax, cmap="Blues", linewidths=0.1, annot=True, square=True)
-        plt.yticks(fontsize=8)
-        plt.xticks(rotation=20, fontsize=8, ha='right')
+        plt.yticks(fontsize=10)
+        plt.xticks(rotation=20, fontsize=10, ha='right')
         plt.tight_layout()
-        plt.savefig(f'{CORR_REGR_DIR}')
+        plt.savefig(f'{CORR_REGR_DIR}{png_name}')
 
     def plot_corr_gegr(self, x, y, x_name, y_name, slope, intercept, cor, r2):
+        x_name = x_name.replace(':', ' ')
+        y_name = y_name.replace(':', ' ')
         line = slope * x + intercept
         fig, ax = plt.subplots()
         plt.scatter(x, y, s=50)
@@ -133,4 +124,4 @@ class Graphics(object):
         plt.yticks(fontsize=8)
         plt.xticks(rotation=8)
         plt.tight_layout()
-        plt.savefig(f'{CORR_REGR_DIR}{x_name}_{y_name}')
+        plt.savefig(f'{CORR_REGR_DIR}{x_name}_{y_name}.png')
