@@ -1,27 +1,29 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 from utils import *
+from math import log10, floor
 
 
 class Graphics(object):
 
     def plot_descr_stat(self, df):
-        print(df)
         ind_list = df[INDICATOR_GEO].unique()
         for g in [YEAR, SUBJECT]:
+            fig, ax = plt.subplots()
             for i in ind_list:
-                fig, ax = plt.subplots()
                 f = df[(df['indicator'] == i) & (df['factor'] == g)]['factor value']
                 ff = df[(df['indicator'] == i) & (df['factor'] == g)]['mean']
                 if not (f.empty | ff.empty):
                     ax.plot(f, ff, marker='o', label=i)
                     plt.title(f'Среднее значения для показателя\n"{i}"')
                     plt.xlabel(g)
+                    plt.xticks(f, rotation=30, fontsize=8, ha='right')
                     plt.legend(fontsize=8)
-                    plt.xticks(rotation=30, fontsize=8, ha='right')
                     plt.tight_layout()
                     plt.grid()
                     plt.savefig(f'{DESCRIPTIVE_DIR}{g}_{i}')
+                    plt.cla()
+            plt.close(fig)
 
 
     # отображение нескольких показателей описательной статистики на 1 графике
@@ -34,17 +36,19 @@ class Graphics(object):
                 y = df[(df['indicator'] == i) & (df['factor'] == g)]['mean']
                 if not (x.empty | y.empty):
                     ax.plot(x, y, marker='o', label=i)
-            plt.title('Сравнение показателей \'mean\'')
-            plt.xlabel(g)
-            if g == YEAR:
-                ax.legend(fontsize=8, loc='upper center', bbox_to_anchor=(0.5, -0.25),
-                    fancybox=True, shadow=True, ncol=2)
-            else:
-                ax.legend(fontsize=6, bbox_to_anchor=(1, 0.5))
-            plt.xticks(rotation=30, fontsize=8, ha='right')
-            plt.tight_layout()
-            plt.grid()
-            plt.savefig(f'{DESCRIPTIVE_DIR}{g}_{out_name}.png')
+                    plt.title('Сравнение показателей \'mean\'')
+                    plt.xlabel(g)
+                    if g == YEAR:
+                        ax.legend(fontsize=8, loc='upper center', bbox_to_anchor=(0.5, -0.25),
+                            fancybox=True, shadow=True, ncol=2)
+                    else:
+                        ax.legend(fontsize=6, bbox_to_anchor=(1, 0.5))
+                    plt.xticks(x, rotation=30, fontsize=8, ha='right')
+                    plt.tight_layout()
+                    plt.grid()
+                    plt.savefig(f'{DESCRIPTIVE_DIR}{g}_{out_name}.png')
+                    plt.cla()
+            plt.close(fig)
 
     def plot_time_series(self, df):
         subjects = df[SUBJECT].unique()
@@ -60,14 +64,15 @@ class Graphics(object):
                 y = df__['abs inc basic']
                 if not (x.empty | y.empty):
                     ax.plot(x, y, marker='o', label=district)
-            ax.grid(True)
-            ax.set_title(f'Абсолютный прирост базисных показателя\n\'{indicator}\''
+                    plt.xticks(x)
+                    ax.set_title(f'Абсолютный прирост базисных показателя\n\'{indicator}\''
                          f'\n{subject}')
-            plt.legend(fontsize=8, loc='upper center', bbox_to_anchor=(0.5, -0.3),
-          fancybox=True, shadow=True, ncol=2)
-            ax.set_xlabel('Год')
-            plt.tight_layout()
-            plt.savefig(f'{TIME_SERIES_DIR}{indicator}_{subject}.png')
+                    plt.legend(fontsize=8, loc='upper center', bbox_to_anchor=(0.5, -0.3),
+                        fancybox=True, shadow=True, ncol=2)
+                    ax.set_xlabel('Год')
+                    plt.tight_layout()
+                    plt.grid()
+                    plt.savefig(f'{TIME_SERIES_DIR}{indicator}_{subject}.png')
 
     def plot_box(self, data, data2, name, name2, factor, f):
         fig, ax = plt.subplots()
@@ -75,7 +80,7 @@ class Graphics(object):
                     labels=[name, name2])
         plt.xticks(rotation=20, fontsize=8, ha='right')
         ax.set_title(f'Сравнение групп\n{factor} {f}')
-        ax.set_ylabel('значения')
+        ax.set_xlabel('показатели')
         plt.tight_layout()
         plt.grid()
         fig_name_1 = name.split(' на')[0]
@@ -88,6 +93,7 @@ class Graphics(object):
                     labels=ind_list)
         plt.xticks(rotation=20, fontsize=8, ha='right')
         ax.set_title(f'Сравнение групп для \n\'{out_name}\'')
+        ax.set_xlabel('показатели')
         plt.tight_layout()
         plt.grid()
         plt.savefig(f'{GROUP_COMPARISON_DIR}{out_name}')
@@ -107,7 +113,7 @@ class Graphics(object):
         line = slope * x + intercept
         fig, ax = plt.subplots()
         plt.scatter(x, y, s=50)
-        plt.plot(x, line, 'r', label='y={:.2f}x+{:.2f}'.format(slope, intercept))
+        plt.plot(x, line, 'r', label=f'y={round_to_1(slope)}x+{round_to_1(intercept)}')
         plt.plot([], [], ' ', label=f'R = {cor}')
         plt.plot([], [], ' ', label=f'R_sq = {r2}')
         ax.grid(True)
@@ -118,3 +124,10 @@ class Graphics(object):
         plt.xticks(rotation=8)
         plt.tight_layout()
         plt.savefig(f'{CORR_REGR_DIR}{x_name}_{y_name}.png')
+
+
+def round_to_1(x):
+    if (x > -1) & (x < 1):
+        return round(x, -int(floor(log10(abs(x)))))
+    else:
+        return round(x, 2)

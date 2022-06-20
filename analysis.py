@@ -1,10 +1,6 @@
-import numpy
-import pandas as pd
-
 from graphics import Graphics
 from scipy import stats
 from utils import *
-from sklearn.metrics import r2_score
 
 
 class Analysis(object):
@@ -41,7 +37,6 @@ class Analysis(object):
 
                 alpha = 0.05
                 stat, p = stats.normaltest(sorted_df)
-                print(p)
                 pirson = False
                 if p > alpha:
                     pirson = True
@@ -349,12 +344,10 @@ class Analysis(object):
 
         for x in properties_list_x:
             for y in properties_list_y:
-                print(x + '  ' + y)
                 d = data[[x, y]]
                 d = d.dropna(how='any')
 
                 slope, intercept, r, p, stderr = stats.linregress(d[x], d[y])
-                print(p)
                 cor = r
 
                 if abs(cor) < 0.3:
@@ -363,7 +356,6 @@ class Analysis(object):
                     c = CORRELATION[1]
                 else:
                     c = CORRELATION[2]
-                print(c)
 
                 fin_df.loc[len(fin_df)] = [x, y, round(cor, 2), round(stderr, 2), round(r**2, 2)]
 
@@ -379,7 +371,6 @@ def check_pirson_criteria(df):
     if p > alpha:
         pirson = True
     return pirson
-
 
 def get_mean_std(df):
     mean = round(df.mean(), 2)
