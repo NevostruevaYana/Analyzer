@@ -69,32 +69,25 @@ class Graphics(object):
             plt.tight_layout()
             plt.savefig(f'{TIME_SERIES_DIR}{indicator}_{subject}.png')
 
-    def plot_box(self, data, data2, name, name2):
+    def plot_box(self, data, data2, name, name2, factor, f):
         fig, ax = plt.subplots()
         plt.boxplot([data, data2],
                     labels=[name, name2])
         plt.xticks(rotation=20, fontsize=8, ha='right')
-        ax.set_title('Сравнение групп')
-        ax.set_xlabel('показатели')
+        ax.set_title(f'Сравнение групп\n{factor} {f}')
         ax.set_ylabel('значения')
         plt.tight_layout()
         plt.grid()
         fig_name_1 = name.split(' на')[0]
         fig_name_2 = name2.split(' на')[0]
-        plt.savefig(f'{GROUP_COMPARISON_DIR}{fig_name_1}_{fig_name_2}.png')
+        plt.savefig(f'{GROUP_COMPARISON_DIR}{f}_{fig_name_1}_{fig_name_2}.png')
 
-    def plot_multi_box(self, ind_list, out_name):
-        df = pd.read_csv(CSV_PROP)
-        data_list = []
-        for indicator in ind_list:
-            data_list.append(df[indicator].dropna())
-            print(data_list)
+    def plot_multi_box(self, ind_list, data_list, out_name):
         fig, ax = plt.subplots()
         plt.boxplot(data_list,
                     labels=ind_list)
         plt.xticks(rotation=20, fontsize=8, ha='right')
-        ax.set_title(f'Сравнение групп для показателей \'{out_name}\'')
-        ax.set_xlabel('показатели')
+        ax.set_title(f'Сравнение групп для \n\'{out_name}\'')
         plt.tight_layout()
         plt.grid()
         plt.savefig(f'{GROUP_COMPARISON_DIR}{out_name}')
