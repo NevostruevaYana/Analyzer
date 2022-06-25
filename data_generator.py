@@ -1,3 +1,5 @@
+import math
+
 import numpy as np
 from utils import *
 
@@ -5,7 +7,7 @@ from utils import *
 class DataGenerator(object):
 
     def __init__(self, file_name):
-        # assert (EXCEL in file_name) | (os.path.exists(file_name)), 'Некорректное имя файла'
+        assert (EXCEL in file_name) | (os.path.exists(file_name)), 'Некорректное имя файла'
         self.file_name = file_name
 
     # получение и запись полного списка лет и регионов
@@ -14,15 +16,15 @@ class DataGenerator(object):
 
         xlsx_sheet.columns = xlsx_sheet.columns.str.lower()
 
-        # assert (SUBJECT in xlsx_sheet.columns) | (DISTRICT in xlsx_sheet.columns), \
-            # 'Невозможно создать файлы с годами и районами'
+        assert (SUBJECT in xlsx_sheet.columns) | (DISTRICT in xlsx_sheet.columns), \
+            'Невозможно создать файлы с годами и районами'
         districts = xlsx_sheet[[SUBJECT, DISTRICT]].drop_duplicates()
         years = xlsx_sheet[YEAR].drop_duplicates()
 
         years.to_csv(YEARS_CSV, index=False)
         districts.to_csv(DISTRICT_CSV, index=False)
-        # assert os.path.exists(YEARS_CSV), 'Файл с годами не был создан'
-        # assert os.path.exists(DISTRICT_CSV), 'Файл с районами не был создан'
+        assert os.path.exists(YEARS_CSV), 'Файл с годами не был создан'
+        assert os.path.exists(DISTRICT_CSV), 'Файл с районами не был создан'
 
     # генерация csv-файлов из excel (конвертация бд)
     def generate_csv(self, sheet, value_col_name):
@@ -30,7 +32,7 @@ class DataGenerator(object):
         districts = pd.read_csv(DISTRICT_CSV)[[SUBJECT, DISTRICT]].values
 
         xlsx = pd.ExcelFile(self.file_name)
-        # assert sheet in xlsx.sheet_names, 'Некорректнй лист'
+        assert sheet in xlsx.sheet_names, 'Некорректнй лист'
 
         xlsx_sheet = pd.read_excel(xlsx, sheet)
         xlsx_sheet.columns = xlsx_sheet.columns.str.lower()
@@ -43,32 +45,32 @@ class DataGenerator(object):
 
         columns = list(properties)
         df = combine_many_indicators(df_list, columns, years, districts)
-        # assert list(df.columns) == [YEAR, SUBJECT, DISTRICT] + columns, 'Файл был сформирован не правильно'
+        assert list(df.columns) == [YEAR, SUBJECT, DISTRICT] + columns, 'Файл был сформирован не правильно'
 
         df = add_azrf(df)
         out_file_name = DATABASE_DIR + sheet + '_' + value_col_name + CSV
         df.to_csv(out_file_name, index=False)
-        # assert os.path.exists(out_file_name), f'Файл {out_file_name} не был создан'
+        assert os.path.exists(out_file_name), f'Файл {out_file_name} не был создан'
 
     # создание нового показателя
 
     def create_property(self, csv1, col1, csv2, col2, col_fin, num):
-        # assert (isinstance(num, int)) | (num > -3), 'Неверный параметр num'
-        # assert os.path.exists(csv1), f'Файла {csv1} не существует'
-        csv = pd.read_csv(csv1)
-        # assert os.path.exists(csv2), f'Файла {csv2} не существует'
-        csv2 = pd.read_csv(csv2)
+        assert (isinstance(num, int)) | (num > -3), 'Неверный параметр num'
+        assert os.path.exists(csv1), f'Файла {csv1} не существует'
+        df_1 = pd.read_csv(csv1)
+        assert os.path.exists(csv2), f'Файла {csv2} не существует'
+        df_2 = pd.read_csv(csv2)
 
-        # assert col1 in csv1.columns, f'Показателя \'{col1}\' в файле {csv1} не существует'
-        # assert col2 in csv2.columns, f'Показателя \'{col2}\' в файле {csv2} не существует'
+        assert col1 in df_1.columns, f'Показателя \'{col1}\' в файле {csv1} не существует'
+        assert col2 in df_2.columns, f'Показателя \'{col2}\' в файле {csv2} не существует'
         if col1 == col2:
             col2_new = f'{col2}_2'
-            csv2.rename(columns={col2: col2_new}, inplace=True)
+            df_2.rename(columns={col2: col2_new}, inplace=True)
             col2 = col2_new
-        csv[col2] = csv2[col2]
+        df_1[col2] = df_2[col2]
 
         df = pd.DataFrame({YEAR: [], SUBJECT: [], DISTRICT: [], col_fin: []})
-        for _, row in csv.iterrows():
+        for _, row in df_1.iterrows():
             if num == -1:
                 df.loc[len(df)] = [row[YEAR], row[SUBJECT], row[DISTRICT],
                                    row[col1] - row[col2]]
@@ -76,7 +78,8 @@ class DataGenerator(object):
                 df.loc[len(df)] = [row[YEAR], row[SUBJECT], row[DISTRICT],
                                    row[col1] + row[col2]]
             else:
-                df.loc[len(df)] = [row[YEAR], row[SUBJECT], row[DISTRICT],
+                if (row[col2] != 0.0):
+                    df.loc[len(df)] = [row[YEAR], row[SUBJECT], row[DISTRICT],
                                row[col1] / row[col2] * num]
 
         if num > 0:
@@ -106,7 +109,7 @@ def get_lower_list(sheet, column_name):
 # основное преобразование показателя из excel в csv
 def create_csv(xlsx_sheet, property, col_name, data_col_name):
     xlsx_with_indicator = xlsx_sheet[xlsx_sheet[col_name].str.lower() == property]
-    # assert data_col_name in xlsx_with_indicator.columns, 'Некорректное название столбца со значениями'
+    assert data_col_name in xlsx_with_indicator.columns, 'Некорректное название столбца со значениями'
     out_file_structure = xlsx_with_indicator[[YEAR, SUBJECT, DISTRICT, data_col_name]]
 
     df = pd.DataFrame(out_file_structure)
@@ -161,7 +164,8 @@ def add_azrf(df):
                     for idx, c in enumerate(columns):
                         if row[c] == 'X':
                             continue
-                        sum[idx] = sum[idx] + row[c]
+                        if not math.isnan(row[c]):
+                            sum[idx] = sum[idx] + row[c]
                 else:
                     index = idx
             if index != -1:

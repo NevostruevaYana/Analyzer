@@ -1,5 +1,6 @@
 import pandas as pd
 import os
+from math import log10, floor
 
 YEAR = 'год'
 YEAR_GEO = 'year'
@@ -151,6 +152,7 @@ def append_col_to_file(file_name, df, col_name):
         df.to_csv(file_name, index=False)
         assert os.path.exists(file_name), f'Файл {file_name} не был создан'
 
+
 # добавление информации в файл по столбцам
 def append_cols_to_file(file_name, df):
     if os.path.exists(file_name):
@@ -160,6 +162,7 @@ def append_cols_to_file(file_name, df):
         read_df.to_csv(file_name, index=False)
     else:
         df.to_csv(file_name, index=False)
+
 
 # создание всех директорий
 def add_all_dir():
@@ -171,3 +174,10 @@ def add_all_dir():
             os.mkdir(dir.removesuffix('/'))
     for d in dir_list:
         assert os.path.exists(d), 'Одна из директорий модуля была не создана'
+
+
+def round_to_1(x):
+    if (x > -1) & (x < 1):
+        return round(x, -int(floor(log10(abs(x)))))
+    else:
+        return round(x, 2)

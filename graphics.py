@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 from utils import *
-from math import log10, floor
 
 
 class Graphics(object):
@@ -55,9 +54,9 @@ class Graphics(object):
         indicator = df[INDICATOR_GEO].unique()
         indicator = indicator[0].replace(':', ',')
         for subject in subjects:
+            fig, ax = plt.subplots()
             df_ = df[df[SUBJECT] == subject]
             districts = df_[DISTRICT].unique()
-            fig, ax = plt.subplots()
             for district in districts:
                 df__ = df_[df_[DISTRICT] == district]
                 x = df__[YEAR]
@@ -73,6 +72,7 @@ class Graphics(object):
                     plt.tight_layout()
                     plt.grid()
                     plt.savefig(f'{TIME_SERIES_DIR}{indicator}_{subject}.png')
+            plt.close(fig)
 
     def plot_box(self, data, data2, name, name2, factor, f):
         fig, ax = plt.subplots()
@@ -86,6 +86,7 @@ class Graphics(object):
         fig_name_1 = name.split(' на')[0]
         fig_name_2 = name2.split(' на')[0]
         plt.savefig(f'{GROUP_COMPARISON_DIR}{f}_{fig_name_1}_{fig_name_2}.png')
+        plt.close(fig)
 
     def plot_multi_box(self, ind_list, data_list, out_name):
         fig, ax = plt.subplots()
@@ -97,6 +98,7 @@ class Graphics(object):
         plt.tight_layout()
         plt.grid()
         plt.savefig(f'{GROUP_COMPARISON_DIR}{out_name}')
+        plt.close(fig)
 
 
     def plot_corr_matrix(self, corr_matrix, png_name):
@@ -106,6 +108,7 @@ class Graphics(object):
         plt.xticks(rotation=20, fontsize=10, ha='right')
         plt.tight_layout()
         plt.savefig(f'{CORR_REGR_DIR}{png_name}')
+        plt.close(fig)
 
     def plot_corr_gegr(self, x, y, x_name, y_name, slope, intercept, cor, r2):
         x_name = x_name.replace(':', ' ')
@@ -124,10 +127,4 @@ class Graphics(object):
         plt.xticks(rotation=8)
         plt.tight_layout()
         plt.savefig(f'{CORR_REGR_DIR}{x_name}_{y_name}.png')
-
-
-def round_to_1(x):
-    if (x > -1) & (x < 1):
-        return round(x, -int(floor(log10(abs(x)))))
-    else:
-        return round(x, 2)
+        plt.close(fig)

@@ -116,7 +116,11 @@ def main():
                                          TIME_SERIES_DIR + RES, 'общая численность населения: всего',
                                          'прирост', 'abs inc chain&growth inc of chain, %',
                                          'geojson_data/прирост')
-
+    generate_geojson_from_df_prop([DISTRICT_POLYGON + 'здоровьеАрхангельска.geojson',
+                                   DISTRICT_POLYGON + 'здоровьеКрасноярск.geojson',
+                                   DISTRICT_POLYGON + 'здоровьеРеспублика К.geojson',
+                                   DISTRICT_POLYGON + 'здоровьеЯмало-Ненецк.geojson'],
+                                  'geojson_data/показатели')
 
 # Предполагается обязательное наличие колонок год, район, субъект
 if __name__ == '__main__':

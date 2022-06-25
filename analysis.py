@@ -340,7 +340,7 @@ class Analysis(object):
         self.g.plot_corr_matrix(corr_matrix, png_name)
 
         fin_df = pd.DataFrame({'property_1': [], 'property_2': [], 'corr_coeff': [],
-                               'stderr': [], 'R^2': []})
+                               'stderr': [], 'R^2': [], 'p-value': []})
 
         for x in properties_list_x:
             for y in properties_list_y:
@@ -349,6 +349,7 @@ class Analysis(object):
 
                 slope, intercept, r, p, stderr = stats.linregress(d[x], d[y])
                 cor = r
+                print(p)
 
                 if abs(cor) < 0.3:
                     c = CORRELATION[0]
@@ -356,8 +357,9 @@ class Analysis(object):
                     c = CORRELATION[1]
                 else:
                     c = CORRELATION[2]
+                print(c)
 
-                fin_df.loc[len(fin_df)] = [x, y, round(cor, 2), round(stderr, 2), round(r**2, 2)]
+                fin_df.loc[len(fin_df)] = [x, y, round(cor, 2), round(stderr, 2), round(r**2, 2), round_to_1(p)]
 
                 self.g.plot_corr_gegr(d[x], d[y], x, y, slope, intercept, round(cor, 2), round(r**2, 2))
 
